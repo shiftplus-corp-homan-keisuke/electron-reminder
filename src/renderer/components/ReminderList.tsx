@@ -50,9 +50,9 @@ export default function ReminderList({ reminders, focusedId, onEdit, onAddClick 
   }
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="flex-1 overflow-x-hidden">
       {/* カード間はゆったりgap、上下にも余白 */}
-      <div className="py-3 flex flex-col gap-2.5">
+      <div className="py-3 flex flex-col gap-2.5 w-full">
         {reminders.map((reminder) => (
           <div
             key={reminder.id}
