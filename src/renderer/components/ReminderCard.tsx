@@ -44,7 +44,7 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
     <div
       className={cn(
         // カード: 丸くて浮いてる、ボーダーはほんのり
-        'group relative flex items-center gap-3 mx-3 px-4 py-3.5 rounded-2xl overflow-hidden',
+        'group relative flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl overflow-hidden',
         'bg-card border border-border',
         'shadow-sm shadow-border/60',
         'hover:shadow-md hover:shadow-primary/10 hover:border-primary/30',

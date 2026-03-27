@@ -28,7 +28,7 @@ const config: ForgeConfig = {
       name: 'electron_reminder',
       authors: 'ちぃかわりまいんだぁ',
       setupIcon: 'resources/icon.ico',
-      setupExe: 'ElectronReminderSetup.exe',
+      setupExe: 'ChiikawaReminderSetup.exe',
     }),
     // 全プラットフォーム: ZIP (CI / クロスビルド検証用)
     new MakerZIP({}),

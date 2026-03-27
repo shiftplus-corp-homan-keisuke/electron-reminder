@@ -1,6 +1,5 @@
 import { useRef, useEffect } from 'react';
 import { BellOff, Plus } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import ReminderCard from './ReminderCard';
 import type { Reminder } from '../types/reminder';
@@ -50,9 +49,9 @@ export default function ReminderList({ reminders, focusedId, onEdit, onAddClick 
   }
 
   return (
-    <ScrollArea className="flex-1 overflow-x-hidden">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden">
       {/* カード間はゆったりgap、上下にも余白 */}
-      <div className="py-3 flex flex-col gap-2.5 w-full">
+      <div className="py-3 px-3 flex flex-col gap-2.5 w-full">
         {reminders.map((reminder) => (
           <div
             key={reminder.id}
@@ -66,6 +65,6 @@ export default function ReminderList({ reminders, focusedId, onEdit, onAddClick 
           </div>
         ))}
       </div>
-    </ScrollArea>
+    </div>
   );
 }
