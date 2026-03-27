@@ -63,11 +63,11 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
       />
 
       {/* 中: テキスト情報 */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         {/* タイムスタンプ行 */}
-        <div className="flex items-center gap-1 mb-0.5">
+        <div className="flex items-center gap-1 mb-0.5 overflow-hidden">
           <Clock className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.8} />
-          <span className="text-[11px] text-muted-foreground leading-none">
+          <span className="text-[11px] text-muted-foreground leading-none truncate">
             {formatFireTime(reminder.nextFireTime, reminder.enabled)}
           </span>
         </div>
@@ -84,7 +84,7 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
 
         {/* メモ */}
         {reminder.memo && (
-          <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5 leading-tight">
+          <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5 leading-tight w-full">
             {reminder.memo}
           </p>
         )}
