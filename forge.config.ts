@@ -26,6 +26,7 @@ const config: ForgeConfig = {
     // Windows: Squirrel インストーラー (npm run make on Windows)
     new MakerSquirrel({
       name: 'electron_reminder',
+      authors: 'ちぃかわりまいんだぁ',
       setupIcon: 'resources/icon.ico',
       setupExe: 'ElectronReminderSetup.exe',
     }),
