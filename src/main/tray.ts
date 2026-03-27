@@ -1,4 +1,4 @@
-import { Tray, Menu, nativeImage } from 'electron';
+import { app, Tray, Menu, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
@@ -12,8 +12,12 @@ export class TrayManager {
   ) {}
 
   init(): void {
+    const resourcesPath = app.isPackaged
+      ? process.resourcesPath
+      : path.join(__dirname, '../../resources');
+
     const iconPath = path.join(
-      process.resourcesPath ?? path.join(__dirname, '../../resources'),
+      resourcesPath,
       process.platform === 'win32' ? 'icon.ico' : 'icon.png'
     );
 

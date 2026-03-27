@@ -11,6 +11,7 @@ const config: ForgeConfig = {
     executableName: 'electron-reminder',
     // アイコンを process.resourcesPath 下に配置
     extraResource: [
+      'resources/icon.ico',
       'resources/icon.png',
     ],
     // Windows 向けメタデータ
