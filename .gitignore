@@ -1,0 +1,7 @@
+node_modules/
+.vite/
+out/
+dist/
+.opencode
+AGENTS.md
+opencode.json
