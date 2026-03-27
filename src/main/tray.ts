@@ -14,7 +14,7 @@ export class TrayManager {
   init(): void {
     const iconPath = path.join(
       process.resourcesPath ?? path.join(__dirname, '../../resources'),
-      'tray-icon.png'
+      process.platform === 'win32' ? 'icon.ico' : 'icon.png'
     );
 
     const icon = fs.existsSync(iconPath)

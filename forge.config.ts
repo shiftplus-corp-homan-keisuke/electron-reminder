@@ -9,11 +9,9 @@ const config: ForgeConfig = {
     asar: true,
     icon: 'resources/icon',
     executableName: 'electron-reminder',
-    // 通知アイコン・トレイアイコンを process.resourcesPath 下に配置
+    // アイコンを process.resourcesPath 下に配置
     extraResource: [
       'resources/icon.png',
-      'resources/tray-icon.png',
-      'resources/tray-icon@2x.png',
     ],
     // Windows 向けメタデータ
     appCopyright: `Copyright © ${new Date().getFullYear()}`,
