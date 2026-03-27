@@ -64,7 +64,7 @@ export class NotificationManager {
 
     const payload = JSON.stringify({
       message: title,
-      app_name: 'Electron Reminder',
+      app_name: 'ちぃかわりまいんだぁ',
     });
 
     const options = {

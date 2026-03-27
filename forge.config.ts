@@ -18,9 +18,9 @@ const config: ForgeConfig = {
     // Windows 向けメタデータ
     appCopyright: `Copyright © ${new Date().getFullYear()}`,
     win32metadata: {
-      FileDescription: 'Electron Reminder',
+      FileDescription: 'ちぃかわりまいんだぁ',
       OriginalFilename: 'electron-reminder.exe',
-      ProductName: 'Electron Reminder',
+      ProductName: 'ちぃかわりまいんだぁ',
     },
   },
   rebuildConfig: {},

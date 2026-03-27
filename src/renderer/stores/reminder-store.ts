@@ -6,7 +6,7 @@ import { calculateNextFireTime } from '../lib/recurrence';
 import { dexieStorage } from '../lib/dexie-storage';
 import { syncRemindersToMain } from '../lib/ipc';
 
-export type ReminderFilter = 'all' | 'active' | 'disabled' | RecurrenceType;
+export type ReminderFilter = 'pending' | 'done' | 'all' | RecurrenceType;
 
 interface ReminderState {
   reminders: Reminder[];
@@ -39,7 +39,7 @@ export const useReminderStore = create<ReminderState>()(
   persist(
     (set, get) => ({
       reminders: [],
-      filter: 'all',
+      filter: 'pending',
       focusedReminderId: null,
 
       addReminder(data) {
@@ -149,13 +149,16 @@ export const useReminderStore = create<ReminderState>()(
         const { reminders, filter } = get();
 
         const filtered = reminders.filter((r) => {
+          // 完了 = 1回きりで発火済み (nextFireTime === null かつ firedAt あり)
+          const isDone = r.recurrenceType === 'once' && r.nextFireTime === null && !!r.firedAt;
+
           switch (filter) {
+            case 'pending':
+              return !isDone;
+            case 'done':
+              return isDone;
             case 'all':
               return true;
-            case 'active':
-              return r.enabled;
-            case 'disabled':
-              return !r.enabled;
             default:
               // RecurrenceType によるフィルター
               return r.recurrenceType === filter;

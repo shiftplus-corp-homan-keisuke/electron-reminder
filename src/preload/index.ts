@@ -40,4 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Webhook URL
   setWebhookUrl: (url: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.SET_WEBHOOK_URL, url),
+
+  // Windows通知抑制フラグ
+  setDisableNativeNotification: (disabled: boolean) =>
+    ipcRenderer.invoke(IPC_CHANNELS.SET_DISABLE_NATIVE_NOTIFICATION, disabled),
 });

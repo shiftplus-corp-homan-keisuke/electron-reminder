@@ -26,4 +26,6 @@ export interface AppSettings {
   launchAtStartup: boolean;
   theme: 'light' | 'dark' | 'system';
   webhookUrl: string;
+  disableNativeNotificationOnWebhook: boolean;
+  chiikawaModeEnabled: boolean; // ちぃかわもーど ON/OFF
 }

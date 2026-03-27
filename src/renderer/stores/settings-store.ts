@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AppSettings } from '../types/reminder';
 import { dexieStorage } from '../lib/dexie-storage';
-import { getAutoLaunch, setAutoLaunch, setWebhookUrl as ipcSetWebhookUrl } from '../lib/ipc';
+import { getAutoLaunch, setAutoLaunch, setWebhookUrl as ipcSetWebhookUrl, setDisableNativeNotification as ipcSetDisableNativeNotification } from '../lib/ipc';
 
 interface SettingsState {
   settings: AppSettings;
@@ -12,6 +12,8 @@ interface SettingsState {
   setTheme(theme: AppSettings['theme']): void;
   setLaunchAtStartup(enabled: boolean): void;
   setWebhookUrl(url: string): void;
+  setDisableNativeNotification(disabled: boolean): void;
+  setChiikawaMode(enabled: boolean): void;
   initialize(): Promise<void>;
 }
 
@@ -22,6 +24,8 @@ export const useSettingsStore = create<SettingsState>()(
         launchAtStartup: false,
         theme: 'system',
         webhookUrl: '',
+        disableNativeNotificationOnWebhook: false,
+        chiikawaModeEnabled: true,
       },
       initialized: false,
       hydrated: false,
@@ -49,6 +53,21 @@ export const useSettingsStore = create<SettingsState>()(
         ipcSetWebhookUrl(url).catch((err) => {
           console.error('[SettingsStore] setWebhookUrl failed:', err);
         });
+      },
+
+      setDisableNativeNotification(disabled) {
+        set((state) => ({
+          settings: { ...state.settings, disableNativeNotificationOnWebhook: disabled },
+        }));
+        ipcSetDisableNativeNotification(disabled).catch((err) => {
+          console.error('[SettingsStore] setDisableNativeNotification failed:', err);
+        });
+      },
+
+      setChiikawaMode(enabled) {
+        set((state) => ({
+          settings: { ...state.settings, chiikawaModeEnabled: enabled },
+        }));
       },
 
       async initialize() {

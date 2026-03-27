@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
+import { Bell, Pencil } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -151,7 +152,17 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{reminder ? 'リマインダーを編集' : '新しいリマインダー'}</DialogTitle>
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 shrink-0">
+              {reminder
+                ? <Pencil className="size-4 text-primary" />
+                : <Bell className="size-4 text-primary" />
+              }
+            </div>
+            <DialogTitle className="text-base font-bold">
+              {reminder ? 'リマインダーを編集' : '新しいリマインダー'}
+            </DialogTitle>
+          </div>
           <DialogDescription className="sr-only">
             リマインダーの詳細を入力してください
           </DialogDescription>
@@ -374,7 +385,7 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             キャンセル
           </Button>
-          <Button onClick={handleSave}>保存</Button>
+          <Button onClick={handleSave} className="bg-primary hover:bg-primary/90">保存</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

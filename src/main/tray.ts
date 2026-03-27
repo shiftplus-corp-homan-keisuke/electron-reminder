@@ -22,7 +22,7 @@ export class TrayManager {
       : nativeImage.createEmpty();
 
     this.tray = new Tray(icon);
-    this.tray.setToolTip('Electron Reminder');
+    this.tray.setToolTip('ちぃかわりまいんだぁ');
 
     this.tray.on('click', () => {
       this.showWindowFn();

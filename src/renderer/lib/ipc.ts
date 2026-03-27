@@ -11,6 +11,7 @@ export interface ElectronAPI {
   getNativeTheme(): Promise<'light' | 'dark'>;
   onThemeChanged(callback: (theme: 'light' | 'dark') => void): () => void;
   setWebhookUrl(url: string): Promise<void>;
+  setDisableNativeNotification(disabled: boolean): Promise<void>;
 }
 
 // AppSettings は再エクスポート (他モジュールからの参照用)
@@ -42,4 +43,8 @@ export async function getNativeTheme(): Promise<'light' | 'dark'> {
 
 export async function setWebhookUrl(url: string): Promise<void> {
   await getElectronAPI()?.setWebhookUrl(url);
+}
+
+export async function setDisableNativeNotification(disabled: boolean): Promise<void> {
+  await getElectronAPI()?.setDisableNativeNotification(disabled);
 }

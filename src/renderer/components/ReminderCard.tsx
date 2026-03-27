@@ -1,6 +1,5 @@
-import { Trash2 } from 'lucide-react';
+import { Trash2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
@@ -24,38 +23,84 @@ interface ReminderCardProps {
   onEdit: () => void;
 }
 
+/** 繰り返しタイプに応じたパステルカラーバッジ */
+const RECURRENCE_COLORS: Record<string, string> = {
+  once:    'bg-[oklch(0.93_0.04_65)]  text-[oklch(0.45_0.12_65)]',
+  daily:   'bg-[oklch(0.93_0.04_180)] text-[oklch(0.40_0.12_180)]',
+  weekly:  'bg-[oklch(0.93_0.04_265)] text-[oklch(0.42_0.12_265)]',
+  monthly: 'bg-[oklch(0.93_0.04_305)] text-[oklch(0.42_0.12_305)]',
+  yearly:  'bg-[oklch(0.93_0.04_355)] text-[oklch(0.48_0.14_355)]',
+};
+
 export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCardProps) {
   const toggleEnabled = useReminderStore((s) => s.toggleEnabled);
   const deleteReminder = useReminderStore((s) => s.deleteReminder);
 
+  const isActive = reminder.enabled && !!reminder.nextFireTime;
+  const isDisabledOrDone = !reminder.enabled || !reminder.nextFireTime;
+  const recurrenceColor = RECURRENCE_COLORS[reminder.recurrenceType] ?? RECURRENCE_COLORS.once;
+
   return (
     <div
       className={cn(
-        'group relative flex items-center gap-3 px-4 py-3 hover:bg-accent/40 transition-colors cursor-pointer',
-        isFocused && 'ring-2 ring-inset ring-primary bg-accent/30',
+        // カード: 丸くて浮いてる、ボーダーはほんのり
+        'group relative flex items-center gap-3 mx-3 px-4 py-3.5 rounded-2xl',
+        'bg-card border border-border',
+        'shadow-sm shadow-border/60',
+        'hover:shadow-md hover:shadow-primary/10 hover:border-primary/30',
+        'transition-all duration-200 cursor-pointer',
+        isFocused && 'border-primary/50 shadow-md shadow-primary/20 bg-accent/30',
+        isDisabledOrDone && 'opacity-60',
       )}
       onClick={onEdit}
     >
-      {/* 左: テキスト情報 */}
+      {/* 左: ステータスドット (ぷっくり丸) */}
+      <div
+        className={cn(
+          'size-2.5 rounded-full shrink-0 transition-colors',
+          isActive ? 'bg-primary shadow-sm shadow-primary/40' : 'bg-muted-foreground/30',
+        )}
+      />
+
+      {/* 中: テキスト情報 */}
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground font-medium">
-          {formatFireTime(reminder.nextFireTime, reminder.enabled)}
-        </p>
-        <p className="text-sm font-semibold text-foreground truncate mt-0.5">
+        {/* タイムスタンプ行 */}
+        <div className="flex items-center gap-1 mb-0.5">
+          <Clock className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.8} />
+          <span className="text-[11px] text-muted-foreground leading-none">
+            {formatFireTime(reminder.nextFireTime, reminder.enabled)}
+          </span>
+        </div>
+
+        {/* タイトル */}
+        <p
+          className={cn(
+            'text-[13.5px] font-bold truncate leading-snug',
+            isDisabledOrDone ? 'text-muted-foreground line-through decoration-muted-foreground/50' : 'text-foreground',
+          )}
+        >
           {reminder.title}
         </p>
+
+        {/* メモ */}
         {reminder.memo && (
-          <p className="text-xs text-muted-foreground/80 truncate mt-0.5">
+          <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5 leading-tight">
             {reminder.memo}
           </p>
         )}
       </div>
 
-      {/* 右: コントロール */}
+      {/* 右: コントロール群 */}
       <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-        <Badge variant="outline" className="text-xs font-normal hidden sm:inline-flex">
+        {/* 繰り返しバッジ: パステルカラー丸バッジ */}
+        <span
+          className={cn(
+            'inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold leading-none',
+            recurrenceColor,
+          )}
+        >
           {recurrenceLabel(reminder.recurrenceType)}
-        </Badge>
+        </span>
 
         <Switch
           size="sm"
@@ -64,29 +109,29 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
           aria-label={reminder.enabled ? '無効にする' : '有効にする'}
         />
 
-        {/* 削除ボタン: hover時のみ表示 */}
+        {/* 削除ボタン: 非ホバー時はサイズゼロで余白を残さない */}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
               size="icon-sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+              className="w-0 overflow-hidden group-hover:w-7 transition-all duration-150 rounded-xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 p-0 group-hover:p-1"
               aria-label="削除"
             >
-              <Trash2 className="size-3.5" />
+              <Trash2 className="size-3.5 shrink-0" strokeWidth={1.8} />
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="rounded-3xl">
             <AlertDialogHeader>
-              <AlertDialogTitle>リマインダーを削除しますか？</AlertDialogTitle>
+              <AlertDialogTitle>削除しますか？</AlertDialogTitle>
               <AlertDialogDescription>
                 「{reminder.title}」を削除します。この操作は元に戻せません。
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogCancel className="rounded-xl">キャンセル</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-destructive text-white hover:bg-destructive/90"
+                className="rounded-xl bg-destructive text-white hover:bg-destructive/90"
                 onClick={() => deleteReminder(reminder.id)}
               >
                 削除

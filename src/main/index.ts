@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, Menu } from 'electron';
 import path from 'path';
 import { IPC_CHANNELS } from '../shared/constants';
 import { autoLaunch } from './auto-launch';
@@ -25,7 +25,7 @@ if (process.platform === 'linux') {
 // setAppUserModelId を設定しないと Windows の通知センターに通知が届かない
 // ─────────────────────────────────────────────────────────
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.electron-reminder.app');
+  app.setAppUserModelId('com.chiikawa-reminder.app');
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -33,20 +33,38 @@ let trayManager: TrayManager | null = null;
 const scheduler = new Scheduler();
 const notificationManager = new NotificationManager();
 let webhookUrl = '';
+let disableNativeNotificationOnWebhook = false;
+
+function resolveIcon(): string {
+  // パッケージ済み: process.resourcesPath 以下
+  // 開発時: プロジェクトルートの resources/ 以下
+  const base = app.isPackaged
+    ? process.resourcesPath
+    : path.join(__dirname, '../../resources');
+
+  if (process.platform === 'win32') return path.join(base, 'icon.ico');
+  if (process.platform === 'darwin') return path.join(base, 'icon.png');
+  return path.join(base, 'icon.png');
+}
 
 function createWindow(): void {
+  // アプリケーションメニューバーを完全に除去
+  Menu.setApplicationMenu(null);
+
   mainWindow = new BrowserWindow({
     width: 480,
     height: 700,
     minWidth: 420,
     minHeight: 500,
+    icon: resolveIcon(),
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
     titleBarStyle: 'default',
-    title: 'Electron Reminder',
+    title: 'ちぃかわりまいんだぁ',
     show: false,
   });
 
@@ -124,6 +142,10 @@ function registerIpcHandlers(): void {
     webhookUrl = url;
   });
 
+  ipcMain.handle(IPC_CHANNELS.SET_DISABLE_NATIVE_NOTIFICATION, (_event, disabled: boolean) => {
+    disableNativeNotificationOnWebhook = disabled;
+  });
+
   nativeTheme.on('updated', () => {
     const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
     mainWindow?.webContents.send(IPC_CHANNELS.THEME_CHANGED, theme);
@@ -135,13 +157,15 @@ function startScheduler(): void {
     // Rendererに発火を通知
     mainWindow?.webContents.send(IPC_CHANNELS.REMINDER_FIRED, id);
 
-    // 通知を表示
-    notificationManager.show({ id, title, memo }, (firedId) => {
-      // 通知クリック時: ウィンドウを表示してフォーカスするリマインダーを通知
-      mainWindow?.show();
-      mainWindow?.focus();
-      mainWindow?.webContents.send(IPC_CHANNELS.FOCUS_REMINDER, firedId);
-    });
+    // Windows通知: Webhook設定済み かつ 抑制フラグON の場合はスキップ
+    const skipNative = disableNativeNotificationOnWebhook && !!webhookUrl;
+    if (!skipNative) {
+      notificationManager.show({ id, title, memo }, (firedId) => {
+        mainWindow?.show();
+        mainWindow?.focus();
+        mainWindow?.webContents.send(IPC_CHANNELS.FOCUS_REMINDER, firedId);
+      });
+    }
 
     // Webhook 送信
     notificationManager.sendWebhook(webhookUrl, title);
