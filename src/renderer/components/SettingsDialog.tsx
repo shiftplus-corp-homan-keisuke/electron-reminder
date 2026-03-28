@@ -18,17 +18,17 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { Sparkles, Palette, Bell, Webhook } from 'lucide-react';
+import { Sparkles, Bell, Webhook } from 'lucide-react';
 import { TimePickerInput } from '@/components/ui/time-picker-input';
 import { useSettingsStore } from '../stores/settings-store';
 import type { AppSettings } from '../types/reminder';
+import appIcon from '../assets/icon.png';
 
 // ─── カテゴリー定義 ───────────────────────────────────────────
-type SettingsCategory = 'general' | 'appearance' | 'notification' | 'integration';
+type SettingsCategory = 'general' | 'notification' | 'integration';
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: React.ReactNode }[] = [
   { id: 'general',      label: '一般',   icon: <Sparkles className="size-4" strokeWidth={1.8} /> },
-  { id: 'appearance',   label: '表示',   icon: <Palette  className="size-4" strokeWidth={1.8} /> },
   { id: 'notification', label: '通知',   icon: <Bell     className="size-4" strokeWidth={1.8} /> },
   { id: 'integration',  label: '連携',   icon: <Webhook  className="size-4" strokeWidth={1.8} /> },
 ];
@@ -42,6 +42,8 @@ const DAY_OF_WEEK_OPTIONS = [
   { value: 5, label: '金曜日' },
   { value: 6, label: '土曜日' },
 ];
+
+const APP_VERSION = __APP_VERSION__;
 
 // ─── 共通部品 ─────────────────────────────────────────────────
 
@@ -71,11 +73,12 @@ function SettingRow({
   );
 }
 
-// ─── 一般パネル ───────────────────────────────────────────────
+// ─── 一般パネル（一般＋表示を統合）─────────────────────────────
 function GeneralPanel() {
   const settings = useSettingsStore((s) => s.settings);
   const setLaunchAtStartup = useSettingsStore((s) => s.setLaunchAtStartup);
   const setChiikawaMode = useSettingsStore((s) => s.setChiikawaMode);
+  const setTheme = useSettingsStore((s) => s.setTheme);
 
   return (
     <div className="flex flex-col gap-5">
@@ -89,25 +92,6 @@ function GeneralPanel() {
       </SettingRow>
 
       <Separator />
-
-      <SettingRow
-        label="Windows起動時に自動起動"
-        description="有効にすると、Windows起動時にバックグラウンドで自動的に起動します"
-      >
-        <Switch checked={settings.launchAtStartup} onCheckedChange={setLaunchAtStartup} />
-      </SettingRow>
-    </div>
-  );
-}
-
-// ─── 表示パネル ───────────────────────────────────────────────
-function AppearancePanel() {
-  const settings = useSettingsStore((s) => s.settings);
-  const setTheme = useSettingsStore((s) => s.setTheme);
-
-  return (
-    <div className="flex flex-col gap-5">
-      <SectionTitle>表示</SectionTitle>
 
       <SettingRow label="テーマ" description="アプリ全体の配色テーマを選択します">
         <Select
@@ -123,6 +107,15 @@ function AppearancePanel() {
             <SelectItem value="dark">ダーク</SelectItem>
           </SelectContent>
         </Select>
+      </SettingRow>
+
+      <Separator />
+
+      <SettingRow
+        label="Windows起動時に自動起動"
+        description="有効にすると、Windows起動時にバックグラウンドで自動的に起動します"
+      >
+        <Switch checked={settings.launchAtStartup} onCheckedChange={setLaunchAtStartup} />
       </SettingRow>
     </div>
   );
@@ -282,7 +275,6 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
   const renderPanel = () => {
     switch (activeCategory) {
       case 'general':      return <GeneralPanel />;
-      case 'appearance':   return <AppearancePanel />;
       case 'notification': return <NotificationPanel />;
       case 'integration':  return <IntegrationPanel />;
     }
@@ -319,6 +311,21 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 </button>
               ))}
             </nav>
+
+            {/* バージョン情報 */}
+            <div className="p-3 border-t border-border shrink-0">
+              <div className="flex items-center gap-2 px-1">
+                <img src={appIcon} alt="" className="w-5 h-5 object-contain opacity-80" draggable={false} />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-medium text-muted-foreground/70 leading-tight">
+                    ちぃかわりまいんだぁ
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/50 leading-tight">
+                    v{APP_VERSION}
+                  </span>
+                </div>
+              </div>
+            </div>
           </aside>
 
           {/* 右: コンテンツパネル */}
