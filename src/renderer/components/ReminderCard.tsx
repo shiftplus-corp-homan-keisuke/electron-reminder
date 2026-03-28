@@ -50,10 +50,10 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
       className={cn(
         // カード: 丸くて浮いてる、ボーダーはほんのり
         'group relative flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl overflow-hidden',
-        'bg-card border border-border',
+        'bg-card/80 backdrop-blur-md border border-border/50',
         'shadow-sm shadow-border/60',
         'hover:shadow-md hover:shadow-primary/10 hover:border-primary/30',
-        'transition-all duration-200 cursor-pointer',
+        'hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 cursor-pointer',
         isFocused && 'border-primary/50 shadow-md shadow-primary/20 bg-accent/30',
         isDisabledOrDone && 'opacity-60',
       )}
@@ -68,7 +68,7 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
       />
 
       {/* 中: テキスト情報 */}
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-hidden pr-8">
         {/* タイムスタンプ行 */}
         <div className="flex items-center gap-1 mb-0.5 overflow-hidden">
           <Clock className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.8} />
@@ -89,7 +89,10 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
       </div>
 
       {/* 右: コントロール群 */}
-      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+      <div 
+        className="flex items-center gap-2 shrink-0 transition-transform duration-200 group-hover:-translate-x-8" 
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* カテゴリーバッジ */}
         {category && (
           <span
@@ -116,14 +119,19 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
           onCheckedChange={() => toggleEnabled(reminder.id)}
           aria-label={reminder.enabled ? '無効にする' : '有効にする'}
         />
+      </div>
 
-        {/* 削除ボタン: 非ホバー時はサイズゼロで余白を残さない */}
+      {/* 削除ボタン: ホバー時のみ右端にフェードイン */}
+      <div 
+        className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
               size="icon-sm"
-              className="w-0 overflow-hidden group-hover:w-7 transition-all duration-150 rounded-xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 p-0 group-hover:p-1"
+              className="w-7 h-7 p-0 flex items-center justify-center rounded-xl text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10"
               aria-label="削除"
             >
               <Trash2 className="size-3.5 shrink-0" strokeWidth={1.8} />

@@ -21,6 +21,9 @@ export interface ElectronAPI {
   setWebhookUrl(url: string): Promise<void>;
   setDisableNativeNotification(disabled: boolean): Promise<void>;
   setDigestSettings(payload: DigestSettingsPayload): Promise<void>;
+  windowMinimize(): void;
+  windowMaximize(): void;
+  windowClose(): void;
 }
 
 // AppSettings は再エクスポート (他モジュールからの参照用)

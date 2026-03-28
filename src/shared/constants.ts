@@ -11,6 +11,9 @@ export const IPC_CHANNELS = {
   SET_WEBHOOK_URL: 'set-webhook-url', // Renderer → Main: Webhook URL を同期
   SET_DISABLE_NATIVE_NOTIFICATION: 'set-disable-native-notification', // Renderer → Main: Windows通知抑制フラグを同期
   SET_DIGEST_SETTINGS: 'set-digest-settings',                         // Renderer → Main: ダイジェスト通知設定を同期
+  WINDOW_MINIMIZE: 'window-minimize',
+  WINDOW_MAXIMIZE: 'window-maximize',
+  WINDOW_CLOSE: 'window-close',
 } as const;
 
 export const DEFAULT_SETTINGS = {

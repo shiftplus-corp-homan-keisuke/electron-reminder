@@ -119,13 +119,13 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-56 flex flex-col h-full bg-card border-r border-border shrink-0">
+    <aside className="w-56 flex flex-col h-full bg-card/80 backdrop-blur-xl border-r border-border/50 shrink-0 z-10">
 
       {/* 追加ボタン */}
       <div className="p-3 shrink-0">
         <Button
           onClick={onAddClick}
-          className="w-full h-9 rounded-xl text-sm gap-2 bg-primary hover:bg-primary/90 font-bold shadow-sm shadow-primary/20"
+          className="w-full h-9 rounded-xl text-sm gap-2 bg-primary hover:bg-primary/90 font-bold shadow-sm shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
           aria-label="リマインダーを追加 (Ctrl+N)"
         >
           <Plus className="size-4" strokeWidth={2.5} />

@@ -38,7 +38,7 @@ export default function ReminderList({ reminders, focusedId, onEdit, onAddClick 
         {onAddClick && (
           <Button
             onClick={onAddClick}
-            className="gap-2 rounded-2xl px-5 h-10 bg-primary text-primary-foreground hover:bg-primary/85 shadow-md shadow-primary/25 font-bold text-[13px]"
+            className="gap-2 rounded-2xl px-5 h-10 bg-primary text-primary-foreground hover:bg-primary/85 shadow-md shadow-primary/25 font-bold text-[13px] hover:scale-105 active:scale-95 transition-all"
           >
             <Plus className="size-4" strokeWidth={2.5} />
             追加する

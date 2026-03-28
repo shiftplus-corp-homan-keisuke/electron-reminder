@@ -41,4 +41,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   setDigestSettings: (payload: DigestSettingsPayload) =>
     ipcRenderer.invoke(IPC_CHANNELS.SET_DIGEST_SETTINGS, payload),
+
+  windowMinimize: () => ipcRenderer.send(IPC_CHANNELS.WINDOW_MINIMIZE),
+  windowMaximize: () => ipcRenderer.send(IPC_CHANNELS.WINDOW_MAXIMIZE),
+  windowClose: () => ipcRenderer.send(IPC_CHANNELS.WINDOW_CLOSE),
 });

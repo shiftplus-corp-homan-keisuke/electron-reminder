@@ -37,12 +37,28 @@ function resolveIcon(): string {
   return path.join(base, 'icon.png');
 }
 
+ipcMain.on(IPC_CHANNELS.WINDOW_MINIMIZE, (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.minimize();
+});
+ipcMain.on(IPC_CHANNELS.WINDOW_MAXIMIZE, (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) {
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+  }
+});
+ipcMain.on(IPC_CHANNELS.WINDOW_CLOSE, (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) win.hide(); // Hide instead of close to keep app in tray
+});
+
 function createWindow(): void {
   Menu.setApplicationMenu(null);
 
   mainWindow = new BrowserWindow({
     width: 800,
-    height: 700,
+    height: 800,
     minWidth: 680,
     minHeight: 500,
     icon: resolveIcon(),
@@ -52,7 +68,8 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    titleBarStyle: 'default',
+    titleBarStyle: 'hidden',
+    
     title: 'ちぃかわりまいんだぁ',
     show: false,
   });
