@@ -4,26 +4,18 @@ import { IPC_CHANNELS } from '../shared/constants';
 import { autoLaunch } from './auto-launch';
 import { TrayManager } from './tray';
 import { Scheduler } from './scheduler';
+import type { DigestSettings } from './scheduler';
 import { NotificationManager } from './notification';
 import type { Reminder } from '../renderer/types/reminder';
+import type { DigestSettingsPayload } from '../renderer/lib/ipc';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
-// ─────────────────────────────────────────────────────────
-// WSL / 仮想環境の互換性設定
-// GPU アクセラレーションが動作しない環境（WSL2 など）では
-// ハードウェアアクセラレーションを無効にしてソフトウェアレンダリングにフォールバック
-// この呼び出しは app.whenReady() より前に行う必要がある
-// ─────────────────────────────────────────────────────────
 if (process.platform === 'linux') {
   app.disableHardwareAcceleration();
 }
 
-// ─────────────────────────────────────────────────────────
-// Windows 通知を動作させるために必要な設定
-// setAppUserModelId を設定しないと Windows の通知センターに通知が届かない
-// ─────────────────────────────────────────────────────────
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.chiikawa-reminder.app');
 }
@@ -36,8 +28,6 @@ let webhookUrl = '';
 let disableNativeNotificationOnWebhook = false;
 
 function resolveIcon(): string {
-  // パッケージ済み: process.resourcesPath 以下
-  // 開発時: プロジェクトルートの resources/ 以下
   const base = app.isPackaged
     ? process.resourcesPath
     : path.join(__dirname, '../../resources');
@@ -48,13 +38,12 @@ function resolveIcon(): string {
 }
 
 function createWindow(): void {
-  // アプリケーションメニューバーを完全に除去
   Menu.setApplicationMenu(null);
 
   mainWindow = new BrowserWindow({
-    width: 480,
+    width: 1200,
     height: 700,
-    minWidth: 420,
+    minWidth: 900,
     minHeight: 500,
     icon: resolveIcon(),
     autoHideMenuBar: true,
@@ -74,7 +63,6 @@ function createWindow(): void {
 
   if (typeof MAIN_WINDOW_VITE_DEV_SERVER_URL !== 'undefined') {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    // 開発環境では DevTools を自動で開く（エラー確認用）
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
     mainWindow.loadFile(
@@ -82,7 +70,6 @@ function createWindow(): void {
     );
   }
 
-  // ウィンドウの閉じるボタンはアプリ終了ではなく非表示にする
   mainWindow.on('close', (e) => {
     e.preventDefault();
     mainWindow?.hide();
@@ -108,7 +95,6 @@ function initTray(): void {
 }
 
 function quit(): void {
-  // close イベントを外してから閉じることで確実に終了
   mainWindow?.removeAllListeners('close');
   mainWindow?.close();
   trayManager?.destroy();
@@ -146,6 +132,17 @@ function registerIpcHandlers(): void {
     disableNativeNotificationOnWebhook = disabled;
   });
 
+  ipcMain.handle(IPC_CHANNELS.SET_DIGEST_SETTINGS, (_event, payload: DigestSettingsPayload) => {
+    const settings: DigestSettings = {
+      todayEnabled: payload.todayEnabled,
+      todayTime: payload.todayTime,
+      weeklyEnabled: payload.weeklyEnabled,
+      weeklyTime: payload.weeklyTime,
+      weeklyDay: payload.weeklyDay,
+    };
+    scheduler.updateDigestSettings(settings);
+  });
+
   nativeTheme.on('updated', () => {
     const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
     mainWindow?.webContents.send(IPC_CHANNELS.THEME_CHANGED, theme);
@@ -153,23 +150,23 @@ function registerIpcHandlers(): void {
 }
 
 function startScheduler(): void {
-  scheduler.start((id, title, memo) => {
-    // Rendererに発火を通知
-    mainWindow?.webContents.send(IPC_CHANNELS.REMINDER_FIRED, id);
-
-    // Windows通知: Webhook設定済み かつ 抑制フラグON の場合はスキップ
-    const skipNative = disableNativeNotificationOnWebhook && !!webhookUrl;
-    if (!skipNative) {
-      notificationManager.show({ id, title, memo }, (firedId) => {
-        mainWindow?.show();
-        mainWindow?.focus();
-        mainWindow?.webContents.send(IPC_CHANNELS.FOCUS_REMINDER, firedId);
-      });
+  scheduler.start(
+    (id, title) => {
+      mainWindow?.webContents.send(IPC_CHANNELS.REMINDER_FIRED, id);
+      const skipNative = disableNativeNotificationOnWebhook && !!webhookUrl;
+      if (!skipNative) {
+        notificationManager.show({ id, title }, (firedId) => {
+          mainWindow?.show();
+          mainWindow?.focus();
+          mainWindow?.webContents.send(IPC_CHANNELS.FOCUS_REMINDER, firedId);
+        });
+      }
+      notificationManager.sendWebhook(webhookUrl, title);
+    },
+    (type, items) => {
+      notificationManager.showDigest(type, items);
     }
-
-    // Webhook 送信
-    notificationManager.sendWebhook(webhookUrl, title);
-  });
+  );
 }
 
 app.whenReady().then(() => {
@@ -179,12 +176,10 @@ app.whenReady().then(() => {
   startScheduler();
 });
 
-// ウィンドウが全て閉じてもアプリを終了しない (トレイ常駐)
 app.on('window-all-closed', () => {
   // 何もしない: トレイの「終了」からのみ終了できる
 });
 
-// macOS: Dockアイコンクリック時にウィンドウがなければ再作成
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();

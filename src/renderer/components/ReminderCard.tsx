@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useReminderStore } from '../stores/reminder-store';
+import { useCategoryStore } from '../stores/category-store';
 import { formatFireTime, recurrenceLabel } from '../lib/format';
 import type { Reminder } from '../types/reminder';
 
@@ -35,6 +36,11 @@ const RECURRENCE_COLORS: Record<string, string> = {
 export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCardProps) {
   const toggleEnabled = useReminderStore((s) => s.toggleEnabled);
   const deleteReminder = useReminderStore((s) => s.deleteReminder);
+  const categories = useCategoryStore((s) => s.categories);
+
+  const category = reminder.categoryId
+    ? categories.find((c) => c.id === reminder.categoryId)
+    : undefined;
 
   const isActive = reminder.enabled && !!reminder.nextFireTime;
   const isDisabledOrDone = !reminder.enabled || !reminder.nextFireTime;
@@ -75,23 +81,26 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
         {/* タイトル */}
         <p
           className={cn(
-            'text-[13.5px] font-bold truncate leading-snug',
+            'text-[13.5px] font-bold leading-snug whitespace-pre-wrap break-words',
             isDisabledOrDone ? 'text-muted-foreground line-through decoration-muted-foreground/50' : 'text-foreground',
           )}
         >
           {reminder.title}
         </p>
-
-        {/* メモ */}
-        {reminder.memo && (
-          <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5 leading-tight w-full">
-            {reminder.memo}
-          </p>
-        )}
       </div>
 
       {/* 右: コントロール群 */}
       <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+        {/* カテゴリーバッジ */}
+        {category && (
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold leading-none shrink-0"
+            style={{ backgroundColor: `${category.color}20`, color: category.color }}
+          >
+            {category.icon} {category.name}
+          </span>
+        )}
+
         {/* 繰り返しバッジ: パステルカラー丸バッジ */}
         <span
           className={cn(

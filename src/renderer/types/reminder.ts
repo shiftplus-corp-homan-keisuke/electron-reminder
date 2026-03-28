@@ -8,10 +8,18 @@ export interface RecurrenceConfig {
   day?: number;        // 1〜31 - yearlyで使用
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  color: string;    // hex e.g. '#ef4444'
+  icon: string;     // emoji e.g. '💼'
+  createdAt: string;
+}
+
 export interface Reminder {
   id: string;                  // UUID v4
-  title: string;               // 必須 最大100文字
-  memo: string;                // 任意 最大500文字
+  title: string;               // 必須 最大500文字 複数行対応
+  categoryId?: string;         // カテゴリーID (任意)
   dateTime: string;            // ISO 8601 (onceの場合の日時、他タイプは初期設定日時として保持)
   recurrenceType: RecurrenceType;
   recurrenceConfig: RecurrenceConfig;
@@ -27,5 +35,11 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   webhookUrl: string;
   disableNativeNotificationOnWebhook: boolean;
-  chiikawaModeEnabled: boolean; // ちぃかわもーど ON/OFF
+  chiikawaModeEnabled: boolean;
+  // ダイジェスト通知
+  todayDigestEnabled: boolean;
+  todayDigestTime: string;      // "HH:mm"
+  weeklyDigestEnabled: boolean;
+  weeklyDigestTime: string;     // "HH:mm"
+  weeklyDigestDay: number;      // 0(日)〜6(土)
 }

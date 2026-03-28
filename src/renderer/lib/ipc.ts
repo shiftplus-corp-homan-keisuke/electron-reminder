@@ -1,6 +1,14 @@
 import type { Reminder } from '../types/reminder';
 import type { AppSettings } from '../types/reminder';
 
+export interface DigestSettingsPayload {
+  todayEnabled: boolean;
+  todayTime: string;
+  weeklyEnabled: boolean;
+  weeklyTime: string;
+  weeklyDay: number;
+}
+
 // window.electronAPI の型定義 (preloadで提供)
 export interface ElectronAPI {
   syncReminders(reminders: Reminder[]): Promise<void>;
@@ -12,15 +20,12 @@ export interface ElectronAPI {
   onThemeChanged(callback: (theme: 'light' | 'dark') => void): () => void;
   setWebhookUrl(url: string): Promise<void>;
   setDisableNativeNotification(disabled: boolean): Promise<void>;
+  setDigestSettings(payload: DigestSettingsPayload): Promise<void>;
 }
 
 // AppSettings は再エクスポート (他モジュールからの参照用)
 export type { AppSettings };
 
-/**
- * ElectronAPIのアクセサ
- * 開発環境でwindow.electronAPIが未定義の場合はnullを返す
- */
 export function getElectronAPI(): ElectronAPI | null {
   return (window as typeof window & { electronAPI?: ElectronAPI }).electronAPI ?? null;
 }
@@ -47,4 +52,8 @@ export async function setWebhookUrl(url: string): Promise<void> {
 
 export async function setDisableNativeNotification(disabled: boolean): Promise<void> {
   await getElectronAPI()?.setDisableNativeNotification(disabled);
+}
+
+export async function setDigestSettings(payload: DigestSettingsPayload): Promise<void> {
+  await getElectronAPI()?.setDigestSettings(payload);
 }

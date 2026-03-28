@@ -4,49 +4,76 @@ import fs from 'fs';
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
+import type { Reminder } from '../renderer/types/reminder';
 
 export class NotificationManager {
-  show(
-    reminder: { id: string; title: string; memo: string },
-    onClickCallback: (id: string) => void
-  ): void {
-    // ── Windows ネイティブ通知 ──────────────────────────────
-    // Notification.isSupported() が false の環境（WSL 等）では
-    // トースト通知は使えないため、フォールバック処理のみ行う
-    if (!Notification.isSupported()) {
-      console.info(
-        '[Notification] Notification.isSupported() = false。' +
-        'WSL / 仮想環境では Windows トースト通知は届きません。' +
-        'Windows ネイティブ環境で実行してください。'
-      );
-      // フォールバック: タスクバーをフラッシュしてユーザーに気づかせる
-      this._flashTaskbar();
-      return;
-    }
-
-    const body = reminder.memo ? reminder.memo.slice(0, 100) : '';
-
+  private resolveIcon(): string | undefined {
     const iconPath = path.join(
       process.resourcesPath ?? path.join(__dirname, '../../resources'),
       'icon.png'
     );
-    const icon = fs.existsSync(iconPath) ? iconPath : undefined;
+    return fs.existsSync(iconPath) ? iconPath : undefined;
+  }
 
+  show(
+    reminder: { id: string; title: string },
+    onClickCallback: (id: string) => void
+  ): void {
+    if (!Notification.isSupported()) {
+      console.info('[Notification] Notification.isSupported() = false。WSL / 仮想環境では通知は届きません。');
+      this._flashTaskbar();
+      return;
+    }
+
+    const icon = this.resolveIcon();
     const notification = new Notification({
       title: reminder.title,
-      body,
+      body: '',
       timeoutType: 'never',
       ...(icon ? { icon } : {}),
     });
 
-    notification.on('click', () => {
-      onClickCallback(reminder.id);
-    });
-
+    notification.on('click', () => onClickCallback(reminder.id));
     notification.on('failed', (_event, error) => {
       console.error('[Notification] 通知の表示に失敗しました:', error);
     });
+    notification.show();
+  }
 
+  /** ダイジェスト通知 */
+  showDigest(type: 'today' | 'week', items: Reminder[]): void {
+    if (!Notification.isSupported()) {
+      this._flashTaskbar();
+      return;
+    }
+
+    const count = items.length;
+    if (count === 0) return;
+
+    const title = type === 'today'
+      ? `📅 今日の予定 (${count}件)`
+      : `📆 今週の予定 (${count}件)`;
+
+    // 最大3件まで箇条書き表示 (OS通知の文字数制限に配慮)
+    const bodyLines = items.slice(0, 3).map((r) => {
+      const time = r.nextFireTime
+        ? new Date(r.nextFireTime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+        : '';
+      const shortTitle = r.title.split('\n')[0].slice(0, 30);
+      return time ? `${time} ${shortTitle}` : shortTitle;
+    });
+    if (count > 3) bodyLines.push(`...他 ${count - 3} 件`);
+
+    const icon = this.resolveIcon();
+    const notification = new Notification({
+      title,
+      body: bodyLines.join('\n'),
+      timeoutType: 'never',
+      ...(icon ? { icon } : {}),
+    });
+    notification.on('failed', (_event, error) => {
+      console.error('[Notification] ダイジェスト通知の表示に失敗しました:', error);
+    });
     notification.show();
   }
 
@@ -81,23 +108,19 @@ export class NotificationManager {
     const transport = parsedUrl.protocol === 'https:' ? https : http;
     const req = transport.request(options, (res) => {
       console.info(`[Webhook] レスポンス: ${res.statusCode}`);
-      res.resume(); // ボディを読み捨てて接続を解放
+      res.resume();
     });
-
     req.on('error', (err) => {
       console.error('[Webhook] 送信に失敗しました:', err.message);
     });
-
     req.write(payload);
     req.end();
   }
 
-  /** タスクバーボタンを点滅させる (WSL や通知が使えない環境のフォールバック) */
   private _flashTaskbar(): void {
     const win = BrowserWindow.getAllWindows()[0];
     if (win) {
       win.flashFrame(true);
-      // 5 秒後にフラッシュを止める
       setTimeout(() => win.flashFrame(false), 5000);
     }
   }

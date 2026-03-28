@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format, addDays } from 'date-fns';
 import { Bell, Pencil } from 'lucide-react';
 import {
@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,7 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DatePickerInput, type DatePickerInputRef } from '@/components/ui/date-picker-input';
+import { TimePickerInput, type TimePickerInputRef } from '@/components/ui/time-picker-input';
 import { useReminderStore } from '../stores/reminder-store';
+import { useCategoryStore } from '../stores/category-store';
 import {
   DAY_OF_WEEK_OPTIONS,
   MONTH_OPTIONS,
@@ -36,7 +38,7 @@ interface ReminderFormProps {
 
 interface FormValues {
   title: string;
-  memo: string;
+  categoryId: string;
   recurrenceType: RecurrenceType;
   date: string;
   time: string;
@@ -56,7 +58,7 @@ function defaultValues(reminder?: Reminder): FormValues {
   if (!reminder) {
     return {
       title: '',
-      memo: '',
+      categoryId: '',
       recurrenceType: 'once',
       date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
       time: '09:00',
@@ -69,7 +71,7 @@ function defaultValues(reminder?: Reminder): FormValues {
   const dt = new Date(reminder.dateTime);
   return {
     title: reminder.title,
-    memo: reminder.memo,
+    categoryId: reminder.categoryId ?? '',
     recurrenceType: reminder.recurrenceType,
     date: format(dt, 'yyyy-MM-dd'),
     time: reminder.recurrenceType === 'once'
@@ -84,10 +86,14 @@ function defaultValues(reminder?: Reminder): FormValues {
 
 const inputClass =
   'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
-
 export default function ReminderForm({ open, onOpenChange, reminder }: ReminderFormProps) {
   const addReminder = useReminderStore((s) => s.addReminder);
   const updateReminder = useReminderStore((s) => s.updateReminder);
+  const categories = useCategoryStore((s) => s.categories);
+
+  // 日付↔時刻のキーボードナビゲーション用 ref
+  const datePickerRef = useRef<DatePickerInputRef>(null);
+  const timePickerRef = useRef<TimePickerInputRef>(null);
 
   const [values, setValues] = useState<FormValues>(() => defaultValues(reminder));
   const [errors, setErrors] = useState<FormErrors>({});
@@ -130,7 +136,7 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
     if (reminder) {
       updateReminder(reminder.id, {
         title: values.title.trim(),
-        memo: values.memo.trim(),
+        categoryId: values.categoryId || undefined,
         dateTime,
         recurrenceType: values.recurrenceType,
         recurrenceConfig: config,
@@ -138,7 +144,7 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
     } else {
       addReminder({
         title: values.title.trim(),
-        memo: values.memo.trim(),
+        categoryId: values.categoryId || undefined,
         dateTime,
         recurrenceType: values.recurrenceType,
         recurrenceConfig: config,
@@ -172,29 +178,43 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
           {/* タイトル */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="title">タイトル <span className="text-destructive">*</span></Label>
-            <Input
+            <Textarea
               id="title"
               placeholder="例: 薬を飲む"
-              maxLength={100}
+              maxLength={500}
+              rows={3}
+              className="resize-none"
               value={values.title}
               onChange={(e) => set({ title: e.target.value })}
             />
             {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
           </div>
 
-          {/* メモ */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="memo">メモ</Label>
-            <Textarea
-              id="memo"
-              placeholder="詳細メモ（任意）"
-              maxLength={500}
-              rows={2}
-              className="resize-none"
-              value={values.memo}
-              onChange={(e) => set({ memo: e.target.value })}
-            />
-          </div>
+          {/* カテゴリー */}
+          {categories.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label>カテゴリー</Label>
+              <Select
+                value={values.categoryId}
+                onValueChange={(v) => set({ categoryId: v === '__none__' ? '' : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="カテゴリーなし" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">なし</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <span className="flex items-center gap-1.5">
+                        <span>{cat.icon}</span>
+                        <span style={{ color: cat.color }}>{cat.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* 繰り返しタイプ */}
           <div className="flex flex-col gap-1.5">
@@ -220,24 +240,22 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
           {values.recurrenceType === 'once' && (
             <div className="flex gap-2">
               <div className="flex flex-col gap-1.5 flex-1">
-                <Label htmlFor="date">日付 <span className="text-destructive">*</span></Label>
-                <input
-                  id="date"
-                  type="date"
-                  className={inputClass}
+                <Label>日付 <span className="text-destructive">*</span></Label>
+                <DatePickerInput
+                  ref={datePickerRef}
                   value={values.date}
-                  onChange={(e) => set({ date: e.target.value })}
+                  onChange={(v) => set({ date: v })}
+                  onExitRight={() => timePickerRef.current?.focusHour()}
                 />
                 {errors.date && <p className="text-xs text-destructive">{errors.date}</p>}
               </div>
-              <div className="flex flex-col gap-1.5 w-28">
-                <Label htmlFor="time-once">時刻 <span className="text-destructive">*</span></Label>
-                <input
-                  id="time-once"
-                  type="time"
-                  className={inputClass}
+              <div className="flex flex-col gap-1.5 w-36">
+                <Label>時刻 <span className="text-destructive">*</span></Label>
+                <TimePickerInput
+                  ref={timePickerRef}
                   value={values.time}
-                  onChange={(e) => set({ time: e.target.value })}
+                  onChange={(v) => set({ time: v })}
+                  onExitLeft={() => datePickerRef.current?.focusDay()}
                 />
                 {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
               </div>
@@ -245,14 +263,11 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
           )}
 
           {values.recurrenceType === 'daily' && (
-            <div className="flex flex-col gap-1.5 w-28">
-              <Label htmlFor="time-daily">時刻 <span className="text-destructive">*</span></Label>
-              <input
-                id="time-daily"
-                type="time"
-                className={inputClass}
+            <div className="flex flex-col gap-1.5 w-36">
+              <Label>時刻 <span className="text-destructive">*</span></Label>
+              <TimePickerInput
                 value={values.time}
-                onChange={(e) => set({ time: e.target.value })}
+                onChange={(v) => set({ time: v })}
               />
               {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
             </div>
@@ -278,14 +293,11 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col gap-1.5 w-28">
-                <Label htmlFor="time-weekly">時刻 <span className="text-destructive">*</span></Label>
-                <input
-                  id="time-weekly"
-                  type="time"
-                  className={inputClass}
+              <div className="flex flex-col gap-1.5 w-36">
+                <Label>時刻 <span className="text-destructive">*</span></Label>
+                <TimePickerInput
                   value={values.time}
-                  onChange={(e) => set({ time: e.target.value })}
+                  onChange={(v) => set({ time: v })}
                 />
                 {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
               </div>
@@ -312,14 +324,11 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col gap-1.5 w-28">
-                <Label htmlFor="time-monthly">時刻 <span className="text-destructive">*</span></Label>
-                <input
-                  id="time-monthly"
-                  type="time"
-                  className={inputClass}
+              <div className="flex flex-col gap-1.5 w-36">
+                <Label>時刻 <span className="text-destructive">*</span></Label>
+                <TimePickerInput
                   value={values.time}
-                  onChange={(e) => set({ time: e.target.value })}
+                  onChange={(v) => set({ time: v })}
                 />
                 {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
               </div>
@@ -366,14 +375,11 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
                   </Select>
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5 w-28">
-                <Label htmlFor="time-yearly">時刻 <span className="text-destructive">*</span></Label>
-                <input
-                  id="time-yearly"
-                  type="time"
-                  className={inputClass}
+              <div className="flex flex-col gap-1.5 w-36">
+                <Label>時刻 <span className="text-destructive">*</span></Label>
+                <TimePickerInput
                   value={values.time}
-                  onChange={(e) => set({ time: e.target.value })}
+                  onChange={(v) => set({ time: v })}
                 />
                 {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
               </div>

@@ -6,33 +6,84 @@ import { calculateNextFireTime } from '../lib/recurrence';
 import { dexieStorage } from '../lib/dexie-storage';
 import { syncRemindersToMain } from '../lib/ipc';
 
-export type ReminderFilter = 'pending' | 'done' | 'all' | RecurrenceType;
+export type ReminderFilter =
+  | 'pending'
+  | 'done'
+  | 'all'
+  | 'today'
+  | 'thisWeek'
+  | RecurrenceType
+  | `category:${string}`;
+
+// 今日の範囲 [startOfToday, endOfToday] を返す
+function getTodayRange(): [Date, Date] {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+  return [start, end];
+}
+
+// 今週の範囲 [startOfToday, 今週日曜の終わり] を返す (月曜始まり)
+function getWeekRange(): [Date, Date] {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // getDay(): 0=日, 1=月, ..., 6=土 → 月曜からの日数を求める
+  const dayOfWeek = today.getDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(today.getTime() - daysFromMonday * 24 * 60 * 60 * 1000);
+  const sunday = new Date(monday.getTime() + 7 * 24 * 60 * 60 * 1000 - 1); // 日曜の終わり
+  return [today, sunday]; // 今日〜今週日曜
+}
+
+function isDone(r: Reminder): boolean {
+  return r.recurrenceType === 'once' && r.nextFireTime === null && !!r.firedAt;
+}
+
+function matchesFilter(r: Reminder, filter: ReminderFilter): boolean {
+  switch (filter) {
+    case 'pending':
+      return !isDone(r);
+    case 'done':
+      return isDone(r);
+    case 'all':
+      return true;
+    case 'today': {
+      if (!r.enabled || !r.nextFireTime) return false;
+      const [start, end] = getTodayRange();
+      const ft = new Date(r.nextFireTime);
+      return ft >= start && ft <= end;
+    }
+    case 'thisWeek': {
+      if (!r.enabled || !r.nextFireTime) return false;
+      const [start, end] = getWeekRange();
+      const ft = new Date(r.nextFireTime);
+      return ft >= start && ft <= end;
+    }
+    default:
+      if (filter.startsWith('category:')) {
+        const categoryId = filter.slice('category:'.length);
+        return r.categoryId === categoryId;
+      }
+      // 繰り返しタイプでの絞り込みは完了済みを除外
+      return r.recurrenceType === (filter as RecurrenceType) && !isDone(r);
+  }
+}
 
 interface ReminderState {
   reminders: Reminder[];
   filter: ReminderFilter;
   focusedReminderId: string | null;
 
-  // CRUD
   addReminder(data: Omit<Reminder, 'id' | 'createdAt' | 'updatedAt' | 'nextFireTime'>): void;
   updateReminder(id: string, data: Partial<Omit<Reminder, 'id' | 'createdAt'>>): void;
   deleteReminder(id: string): void;
   toggleEnabled(id: string): void;
-
-  // 発火後処理
   markFired(id: string): void;
-
-  // フィルター
   setFilter(filter: ReminderFilter): void;
-
-  // フォーカス (通知クリック時)
   setFocusedReminder(id: string | null): void;
-
-  // メインプロセスへの同期
   syncToMain(): void;
-
-  // フィルター後のリマインダーを返す (ソート込み)
   getFilteredReminders(): Reminder[];
+  getCountByFilter(filter: ReminderFilter): number;
 }
 
 export const useReminderStore = create<ReminderState>()(
@@ -51,9 +102,7 @@ export const useReminderStore = create<ReminderState>()(
           updatedAt: now,
           nextFireTime: null,
         };
-        // nextFireTimeを計算
         newReminder.nextFireTime = calculateNextFireTime(newReminder);
-
         set((state) => ({ reminders: [...state.reminders, newReminder] }));
         get().syncToMain();
       },
@@ -62,11 +111,7 @@ export const useReminderStore = create<ReminderState>()(
         set((state) => ({
           reminders: state.reminders.map((r) => {
             if (r.id !== id) return r;
-            const updated: Reminder = {
-              ...r,
-              ...data,
-              updatedAt: new Date().toISOString(),
-            };
+            const updated: Reminder = { ...r, ...data, updatedAt: new Date().toISOString() };
             updated.nextFireTime = calculateNextFireTime(updated);
             return updated;
           }),
@@ -75,9 +120,7 @@ export const useReminderStore = create<ReminderState>()(
       },
 
       deleteReminder(id) {
-        set((state) => ({
-          reminders: state.reminders.filter((r) => r.id !== id),
-        }));
+        set((state) => ({ reminders: state.reminders.filter((r) => r.id !== id) }));
         get().syncToMain();
       },
 
@@ -85,16 +128,8 @@ export const useReminderStore = create<ReminderState>()(
         set((state) => ({
           reminders: state.reminders.map((r) => {
             if (r.id !== id) return r;
-            const toggled: Reminder = {
-              ...r,
-              enabled: !r.enabled,
-              updatedAt: new Date().toISOString(),
-            };
-            // disabled → nextFireTime を null に
-            // enabled  → 再計算
-            toggled.nextFireTime = toggled.enabled
-              ? calculateNextFireTime(toggled)
-              : null;
+            const toggled: Reminder = { ...r, enabled: !r.enabled, updatedAt: new Date().toISOString() };
+            toggled.nextFireTime = toggled.enabled ? calculateNextFireTime(toggled) : null;
             return toggled;
           }),
         }));
@@ -106,23 +141,10 @@ export const useReminderStore = create<ReminderState>()(
         set((state) => ({
           reminders: state.reminders.map((r) => {
             if (r.id !== id) return r;
-
             if (r.recurrenceType === 'once') {
-              // 1回限り → firedAtをセットし nextFireTime をnullに
-              return {
-                ...r,
-                firedAt: now,
-                nextFireTime: null,
-                updatedAt: now,
-              };
+              return { ...r, firedAt: now, nextFireTime: null, updatedAt: now };
             }
-
-            // 繰り返し → 次回の nextFireTime を再計算
-            const updated: Reminder = {
-              ...r,
-              firedAt: now,
-              updatedAt: now,
-            };
+            const updated: Reminder = { ...r, firedAt: now, updatedAt: now };
             updated.nextFireTime = calculateNextFireTime(updated);
             return updated;
           }),
@@ -140,38 +162,26 @@ export const useReminderStore = create<ReminderState>()(
 
       syncToMain() {
         const { reminders } = get();
-        syncRemindersToMain(reminders).catch((err) => {
+        syncRemindersToMain(reminders).catch((err: unknown) => {
           console.error('[ReminderStore] syncToMain failed:', err);
         });
       },
 
       getFilteredReminders() {
         const { reminders, filter } = get();
+        return reminders
+          .filter((r) => matchesFilter(r, filter))
+          .sort((a, b) => {
+            if (a.nextFireTime === null && b.nextFireTime === null) return 0;
+            if (a.nextFireTime === null) return 1;
+            if (b.nextFireTime === null) return -1;
+            return a.nextFireTime.localeCompare(b.nextFireTime);
+          });
+      },
 
-        const filtered = reminders.filter((r) => {
-          // 完了 = 1回きりで発火済み (nextFireTime === null かつ firedAt あり)
-          const isDone = r.recurrenceType === 'once' && r.nextFireTime === null && !!r.firedAt;
-
-          switch (filter) {
-            case 'pending':
-              return !isDone;
-            case 'done':
-              return isDone;
-            case 'all':
-              return true;
-            default:
-              // RecurrenceType によるフィルター
-              return r.recurrenceType === filter;
-          }
-        });
-
-        // nextFireTime の昇順ソート、null は末尾
-        return filtered.sort((a, b) => {
-          if (a.nextFireTime === null && b.nextFireTime === null) return 0;
-          if (a.nextFireTime === null) return 1;
-          if (b.nextFireTime === null) return -1;
-          return a.nextFireTime.localeCompare(b.nextFireTime);
-        });
+      getCountByFilter(filter) {
+        const { reminders } = get();
+        return reminders.filter((r) => matchesFilter(r, filter)).length;
       },
     }),
     {

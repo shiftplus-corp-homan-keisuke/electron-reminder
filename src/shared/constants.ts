@@ -10,6 +10,7 @@ export const IPC_CHANNELS = {
   FOCUS_REMINDER: 'focus-reminder',   // Main → Renderer: 通知クリック時にリマインダーにフォーカス
   SET_WEBHOOK_URL: 'set-webhook-url', // Renderer → Main: Webhook URL を同期
   SET_DISABLE_NATIVE_NOTIFICATION: 'set-disable-native-notification', // Renderer → Main: Windows通知抑制フラグを同期
+  SET_DIGEST_SETTINGS: 'set-digest-settings',                         // Renderer → Main: ダイジェスト通知設定を同期
 } as const;
 
 export const DEFAULT_SETTINGS = {
