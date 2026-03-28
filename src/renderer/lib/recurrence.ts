@@ -1,13 +1,11 @@
 import {
   addDays,
   addMonths,
-  addYears,
   getDaysInMonth,
   isBefore,
   setDate,
   setHours,
   setMinutes,
-  setMonth,
   setSeconds,
   setMilliseconds,
   getDay,
@@ -54,12 +52,6 @@ export function calculateNextFireTime(reminder: Reminder): string | null {
     case 'monthly': {
       const dayOfMonth = recurrenceConfig.dayOfMonth ?? 1;
       return calcMonthly(now, recurrenceConfig.time, dayOfMonth).toISOString();
-    }
-
-    case 'yearly': {
-      const month = recurrenceConfig.month ?? 1;
-      const day = recurrenceConfig.day ?? 1;
-      return calcYearly(now, recurrenceConfig.time, month, day).toISOString();
     }
 
     default:
@@ -117,27 +109,5 @@ function buildMonthlyCandidate(base: Date, targetDayOfMonth: number, time: strin
   const daysInMonth = getDaysInMonth(base);
   const safeDay = Math.min(targetDayOfMonth, daysInMonth);
   const dateWithDay = setDate(base, safeDay);
-  return applyTime(dateWithDay, time);
-}
-
-function calcYearly(now: Date, time: string, targetMonth: number, targetDay: number): Date {
-  const candidate = buildYearlyCandidate(now, targetMonth, targetDay, time);
-  if (isBefore(now, candidate)) {
-    return candidate;
-  }
-  // 翌年の同月日
-  return buildYearlyCandidate(addYears(now, 1), targetMonth, targetDay, time);
-}
-
-/**
- * 指定年において targetMonth/targetDay の日付を構築する
- * 月末を超える場合は月の最終日にフォールバック
- */
-function buildYearlyCandidate(base: Date, targetMonth: number, targetDay: number, time: string): Date {
-  // month は 1-12 → date-fns は 0-11
-  const dateWithMonth = setMonth(base, targetMonth - 1);
-  const daysInMonth = getDaysInMonth(dateWithMonth);
-  const safeDay = Math.min(targetDay, daysInMonth);
-  const dateWithDay = setDate(dateWithMonth, safeDay);
   return applyTime(dateWithDay, time);
 }

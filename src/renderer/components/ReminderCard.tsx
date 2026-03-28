@@ -30,7 +30,6 @@ const RECURRENCE_COLORS: Record<string, string> = {
   daily:   'bg-[oklch(0.93_0.04_180)] text-[oklch(0.40_0.12_180)]',
   weekly:  'bg-[oklch(0.93_0.04_265)] text-[oklch(0.42_0.12_265)]',
   monthly: 'bg-[oklch(0.93_0.04_305)] text-[oklch(0.42_0.12_305)]',
-  yearly:  'bg-[oklch(0.93_0.04_355)] text-[oklch(0.48_0.14_355)]',
 };
 
 export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCardProps) {

@@ -15,7 +15,6 @@ const FILTER_TABS: { value: ReminderFilter; label: string }[] = [
   { value: 'daily',   label: '毎日' },
   { value: 'weekly',  label: '毎週' },
   { value: 'monthly', label: '毎月' },
-  { value: 'yearly',  label: '毎年' },
 ];
 
 export default function FilterBar({ filter, onFilterChange }: FilterBarProps) {

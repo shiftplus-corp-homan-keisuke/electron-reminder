@@ -13,7 +13,6 @@ const FILTER_LABELS: Record<string, string> = {
   daily:    '毎日',
   weekly:   '毎週',
   monthly:  '毎月',
-  yearly:   '毎年',
 };
 
 interface HeaderProps {

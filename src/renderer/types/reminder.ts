@@ -1,11 +1,9 @@
-export type RecurrenceType = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type RecurrenceType = 'once' | 'daily' | 'weekly' | 'monthly';
 
 export interface RecurrenceConfig {
   time: string;        // "HH:mm"形式 - once以外で使用
   dayOfWeek?: number;  // 0(日)〜6(土) - weeklyで使用
   dayOfMonth?: number; // 1〜31 - monthlyで使用
-  month?: number;      // 1〜12 - yearlyで使用
-  day?: number;        // 1〜31 - yearlyで使用
 }
 
 export interface Category {

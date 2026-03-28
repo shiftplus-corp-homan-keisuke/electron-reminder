@@ -25,7 +25,6 @@ import { useReminderStore } from '../stores/reminder-store';
 import { useCategoryStore } from '../stores/category-store';
 import {
   DAY_OF_WEEK_OPTIONS,
-  MONTH_OPTIONS,
   DAY_OPTIONS,
 } from '../lib/format';
 import type { Reminder, RecurrenceType, RecurrenceConfig } from '../types/reminder';
@@ -44,8 +43,6 @@ interface FormValues {
   time: string;
   dayOfWeek: number;
   dayOfMonth: number;
-  month: number;
-  day: number;
 }
 
 interface FormErrors {
@@ -64,8 +61,6 @@ function defaultValues(reminder?: Reminder): FormValues {
       time: '09:00',
       dayOfWeek: 1,
       dayOfMonth: 1,
-      month: 1,
-      day: 1,
     };
   }
   const dt = new Date(reminder.dateTime);
@@ -79,8 +74,6 @@ function defaultValues(reminder?: Reminder): FormValues {
       : (reminder.recurrenceConfig.time ?? '09:00'),
     dayOfWeek: reminder.recurrenceConfig.dayOfWeek ?? 1,
     dayOfMonth: reminder.recurrenceConfig.dayOfMonth ?? 1,
-    month: reminder.recurrenceConfig.month ?? 1,
-    day: reminder.recurrenceConfig.day ?? 1,
   };
 }
 
@@ -123,10 +116,6 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
     const config: RecurrenceConfig = { time: values.time };
     if (values.recurrenceType === 'weekly') config.dayOfWeek = values.dayOfWeek;
     if (values.recurrenceType === 'monthly') config.dayOfMonth = values.dayOfMonth;
-    if (values.recurrenceType === 'yearly') {
-      config.month = values.month;
-      config.day = values.day;
-    }
 
     const dateTime =
       values.recurrenceType === 'once'
@@ -231,7 +220,6 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
                 <SelectItem value="daily">毎日</SelectItem>
                 <SelectItem value="weekly">毎週</SelectItem>
                 <SelectItem value="monthly">毎月</SelectItem>
-                <SelectItem value="yearly">毎年</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -335,56 +323,6 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
             </div>
           )}
 
-          {values.recurrenceType === 'yearly' && (
-            <div className="flex flex-col gap-3">
-              <div className="flex gap-2">
-                <div className="flex flex-col gap-1.5 flex-1">
-                  <Label>月</Label>
-                  <Select
-                    value={String(values.month)}
-                    onValueChange={(v) => set({ month: Number(v) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-48">
-                      {MONTH_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={String(o.value)}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5 flex-1">
-                  <Label>日</Label>
-                  <Select
-                    value={String(values.day)}
-                    onValueChange={(v) => set({ day: Number(v) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-48">
-                      {DAY_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={String(o.value)}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex flex-col gap-1.5 w-36">
-                <Label>時刻 <span className="text-destructive">*</span></Label>
-                <TimePickerInput
-                  value={values.time}
-                  onChange={(v) => set({ time: v })}
-                />
-                {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
-              </div>
-            </div>
-          )}
         </div>
 
         <DialogFooter>

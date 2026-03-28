@@ -21,7 +21,6 @@ export function recurrenceLabel(type: RecurrenceType): string {
     daily: '毎日',
     weekly: '毎週',
     monthly: '毎月',
-    yearly: '毎年',
   };
   return map[type];
 }
@@ -35,11 +34,6 @@ export const DAY_OF_WEEK_OPTIONS = [
   { value: 5, label: '金曜日' },
   { value: 6, label: '土曜日' },
 ];
-
-export const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
-  value: i + 1,
-  label: `${i + 1}月`,
-}));
 
 export const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({
   value: i + 1,
