@@ -129,6 +129,10 @@ export const useReminderStore = create<ReminderState>()(
           reminders: state.reminders.map((r) => {
             if (r.id !== id) return r;
             const toggled: Reminder = { ...r, enabled: !r.enabled, updatedAt: new Date().toISOString() };
+            // 完了済みonceリマインダーを再有効化する場合は firedAt をクリアして復活させる
+            if (toggled.enabled && toggled.recurrenceType === 'once' && toggled.firedAt) {
+              toggled.firedAt = undefined;
+            }
             toggled.nextFireTime = toggled.enabled ? calculateNextFireTime(toggled) : null;
             return toggled;
           }),
