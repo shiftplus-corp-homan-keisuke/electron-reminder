@@ -33,6 +33,7 @@ interface ReminderFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   reminder?: Reminder;
+  initialTitle?: string;
 }
 
 interface FormValues {
@@ -51,10 +52,10 @@ interface FormErrors {
   time?: string;
 }
 
-function defaultValues(reminder?: Reminder): FormValues {
+function defaultValues(reminder?: Reminder, initialTitle?: string): FormValues {
   if (!reminder) {
     return {
-      title: '',
+      title: initialTitle ?? '',
       categoryId: '',
       recurrenceType: 'once',
       date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
@@ -77,7 +78,7 @@ function defaultValues(reminder?: Reminder): FormValues {
   };
 }
 
-export default function ReminderForm({ open, onOpenChange, reminder }: ReminderFormProps) {
+export default function ReminderForm({ open, onOpenChange, reminder, initialTitle }: ReminderFormProps) {
   const addReminder = useReminderStore((s) => s.addReminder);
   const updateReminder = useReminderStore((s) => s.updateReminder);
   const categories = useCategoryStore((s) => s.categories);
@@ -86,16 +87,16 @@ export default function ReminderForm({ open, onOpenChange, reminder }: ReminderF
   const datePickerRef = useRef<DatePickerInputRef>(null);
   const timePickerRef = useRef<TimePickerInputRef>(null);
 
-  const [values, setValues] = useState<FormValues>(() => defaultValues(reminder));
+  const [values, setValues] = useState<FormValues>(() => defaultValues(reminder, initialTitle));
   const [errors, setErrors] = useState<FormErrors>({});
 
   // ダイアログが開くたびにフォームをリセット
   useEffect(() => {
     if (open) {
-      setValues(defaultValues(reminder));
+      setValues(defaultValues(reminder, initialTitle));
       setErrors({});
     }
-  }, [open, reminder]);
+  }, [open, reminder, initialTitle]);
 
   const set = (partial: Partial<FormValues>) => setValues((v) => ({ ...v, ...partial }));
 

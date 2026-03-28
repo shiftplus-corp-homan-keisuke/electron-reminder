@@ -14,6 +14,7 @@ export const IPC_CHANNELS = {
   WINDOW_MINIMIZE: 'window-minimize',
   WINDOW_MAXIMIZE: 'window-maximize',
   WINDOW_CLOSE: 'window-close',
+  DEEP_LINK_CREATE_REMINDER: 'deep-link-create-reminder', // Main → Renderer: ディープリンク経由でリマインダー作成フォームを開く
 } as const;
 
 export const DEFAULT_SETTINGS = {

@@ -14,6 +14,7 @@ export interface ElectronAPI {
   syncReminders(reminders: Reminder[]): Promise<void>;
   onReminderFired(callback: (id: string) => void): () => void;
   onFocusReminder(callback: (id: string) => void): () => void;
+  onDeepLinkCreateReminder(callback: (title: string) => void): () => void;
   getAutoLaunch(): Promise<boolean>;
   setAutoLaunch(enabled: boolean): Promise<void>;
   getNativeTheme(): Promise<'light' | 'dark'>;

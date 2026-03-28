@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, Menu } from 'electron';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { updateElectronApp } from 'update-electron-app';
 import { IPC_CHANNELS } from '../shared/constants';
 import { autoLaunch } from './auto-launch';
@@ -61,12 +61,59 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.chiikawa-reminder.app');
 }
 
+// カスタムURLスキームの登録: chiikawa-reminder://...
+app.setAsDefaultProtocolClient('chiikawa-reminder');
+
+// Electron 開発時は app.name が "Electron" になるため、
+// ブラウザのプロトコル確認ダイアログに表示されるアプリ名をレジストリで上書き
+if (process.platform === 'win32') {
+  spawnSync('reg', [
+    'add', 'HKCU\\Software\\Classes\\chiikawa-reminder',
+    '/ve', '/t', 'REG_SZ',
+    '/d', 'ちぃかわりまいんだぁ',
+    '/f',
+  ], { windowsHide: true });
+}
+
+// シングルインスタンス強制（ディープリンクの second-instance 処理にも必要）
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  // 既に起動中のインスタンスが second-instance イベントで URL を受け取るので、こちらは終了
+  app.quit();
+} else {
+
 let mainWindow: BrowserWindow | null = null;
 let trayManager: TrayManager | null = null;
 const scheduler = new Scheduler();
 const notificationManager = new NotificationManager();
 let webhookUrl = '';
 let disableNativeNotificationOnWebhook = false;
+
+// 初回起動時のディープリンク（Renderer ロード前に届いた場合に一時保持）
+let pendingDeepLinkTitle: string | null = null;
+
+// アプリ起動中に別インスタンス（ディープリンクなど）が来た場合
+app.on('second-instance', (_event, argv) => {
+  const url = argv.find((arg) => arg.startsWith('chiikawa-reminder://'));
+  if (url) handleDeepLink(url);
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
+// ディープリンクURLをパースして Renderer に通知
+function handleDeepLink(url: string): void {
+  try {
+    const parsed = new URL(url);
+    if (parsed.host !== 'reminder' || parsed.pathname !== '/create') return;
+    const title = parsed.searchParams.get('title') ?? '';
+    mainWindow?.webContents.send(IPC_CHANNELS.DEEP_LINK_CREATE_REMINDER, title);
+  } catch {
+    // 不正なURL - 無視
+  }
+}
 
 function resolveIcon(): string {
   const base = app.isPackaged
@@ -131,6 +178,18 @@ function createWindow(): void {
   mainWindow.on('close', (e) => {
     e.preventDefault();
     mainWindow?.hide();
+  });
+
+  // Renderer ロード完了後、保留中のディープリンクタイトルを送信
+  mainWindow.webContents.once('did-finish-load', () => {
+    if (pendingDeepLinkTitle !== null) {
+      const title = pendingDeepLinkTitle;
+      pendingDeepLinkTitle = null;
+      // React の useEffect が登録される時間を待つ
+      setTimeout(() => {
+        mainWindow?.webContents.send(IPC_CHANNELS.DEEP_LINK_CREATE_REMINDER, title);
+      }, 500);
+    }
   });
 }
 
@@ -232,6 +291,20 @@ app.whenReady().then(() => {
   createWindow();
   initTray();
   startScheduler();
+
+  // 初回起動時のディープリンク: process.argv にURLが含まれる場合はペンディングに格納
+  // (createWindow後なので mainWindow はあるが Renderer ロードは未完 → did-finish-load で送信)
+  const deepLinkUrl = process.argv.find((arg) => arg.startsWith('chiikawa-reminder://'));
+  if (deepLinkUrl) {
+    try {
+      const parsed = new URL(deepLinkUrl);
+      if (parsed.host === 'reminder' && parsed.pathname === '/create') {
+        pendingDeepLinkTitle = parsed.searchParams.get('title') ?? '';
+      }
+    } catch {
+      // 不正なURL - 無視
+    }
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -244,4 +317,5 @@ app.on('activate', () => {
   }
 });
 
+} // gotTheLock else block
 } // handleSquirrelEvent else block

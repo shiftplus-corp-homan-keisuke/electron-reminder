@@ -19,6 +19,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener(IPC_CHANNELS.FOCUS_REMINDER, listener);
   },
 
+  onDeepLinkCreateReminder: (callback: (title: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, title: string) => callback(title);
+    ipcRenderer.on(IPC_CHANNELS.DEEP_LINK_CREATE_REMINDER, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.DEEP_LINK_CREATE_REMINDER, listener);
+  },
+
   getAutoLaunch: () => ipcRenderer.invoke(IPC_CHANNELS.GET_AUTO_LAUNCH),
   setAutoLaunch: (enabled: boolean) =>
     ipcRenderer.invoke(IPC_CHANNELS.SET_AUTO_LAUNCH, enabled),

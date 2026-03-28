@@ -31,6 +31,7 @@ export default function App() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | undefined>();
+  const [initialTitle, setInitialTitle] = useState<string | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [categoryFormOpen, setCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>();
@@ -55,14 +56,20 @@ export default function App() {
     }).catch(console.error);
   }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // IPCリスナー: リマインダー発火・フォーカス
+  // IPCリスナー: リマインダー発火・フォーカス・ディープリンク
   useEffect(() => {
     const api = getElectronAPI();
     const unFired = api?.onReminderFired((id) => markFired(id));
     const unFocus = api?.onFocusReminder((id) => setFocusedReminder(id));
+    const unDeepLink = api?.onDeepLinkCreateReminder((title) => {
+      setEditingReminder(undefined);
+      setInitialTitle(title || undefined);
+      setFormOpen(true);
+    });
     return () => {
       unFired?.();
       unFocus?.();
+      unDeepLink?.();
     };
   }, [markFired, setFocusedReminder]);
 
@@ -193,9 +200,13 @@ export default function App() {
         open={formOpen}
         onOpenChange={(open) => {
           setFormOpen(open);
-          if (!open) setEditingReminder(undefined);
+          if (!open) {
+            setEditingReminder(undefined);
+            setInitialTitle(undefined);
+          }
         }}
         reminder={editingReminder}
+        initialTitle={initialTitle}
       />
       <CategoryForm
         open={categoryFormOpen}
