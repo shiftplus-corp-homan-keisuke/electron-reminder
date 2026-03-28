@@ -1,7 +1,7 @@
 {
   "name": "electron-reminder",
   "productName": "ちぃかわりまいんだぁ",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Windows reminder app built with Electron, React, shadcn/ui",
   "main": ".vite/build/main.js",
   "repository": {
