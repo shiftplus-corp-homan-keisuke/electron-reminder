@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, Menu } from 'electron';
 import path from 'path';
+import { spawn } from 'child_process';
 import { updateElectronApp } from 'update-electron-app';
 import { IPC_CHANNELS } from '../shared/constants';
 import { autoLaunch } from './auto-launch';
@@ -14,9 +15,40 @@ declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
 // Squirrel.Windows イベント処理
-// インストール/アンインストール/アップデート時にアプリが起動されるため即座に終了する
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-if (require('electron-squirrel-startup')) app.quit();
+// インストール/アンインストール/アップデート時にアプリが特殊引数付きで起動されるため
+// ショートカット作成/削除を行って即座に終了する
+function handleSquirrelEvent(): boolean {
+  if (process.platform !== 'win32') return false;
+
+  const cmd = process.argv[1];
+  if (!cmd) return false;
+
+  const appName = path.basename(process.execPath);
+  const updateExe = path.resolve(path.dirname(process.execPath), '..', 'Update.exe');
+
+  const run = (args: string[], done: () => void) => {
+    spawn(updateExe, args, { detached: true }).on('close', done);
+  };
+
+  switch (cmd) {
+    case '--squirrel-install':
+    case '--squirrel-updated':
+      run(['--createShortcut=' + appName], app.quit);
+      return true;
+    case '--squirrel-uninstall':
+      run(['--removeShortcut=' + appName], app.quit);
+      return true;
+    case '--squirrel-obsolete':
+      app.quit();
+      return true;
+    default:
+      return false;
+  }
+}
+
+if (handleSquirrelEvent()) {
+  // Squirrelイベント処理中なのでここで終了（以降のコードは実行しない）
+} else {
 
 // 自動アップデートの初期化 (update.electronjs.org 経由で GitHub Releases をチェック)
 updateElectronApp();
@@ -211,3 +243,5 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
+} // handleSquirrelEvent else block
