@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, Menu } from 'electron';
 import path from 'path';
+import { updateElectronApp } from 'update-electron-app';
 import { IPC_CHANNELS } from '../shared/constants';
 import { autoLaunch } from './auto-launch';
 import { TrayManager } from './tray';
@@ -11,6 +12,14 @@ import type { DigestSettingsPayload } from '../renderer/lib/ipc';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
+
+// Squirrel.Windows イベント処理
+// インストール/アンインストール/アップデート時にアプリが起動されるため即座に終了する
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+if (require('electron-squirrel-startup')) app.quit();
+
+// 自動アップデートの初期化 (update.electronjs.org 経由で GitHub Releases をチェック)
+updateElectronApp();
 
 if (process.platform === 'linux') {
   app.disableHardwareAcceleration();
