@@ -11,10 +11,14 @@ export interface DigestSettings {
 export class Scheduler {
   private reminders: Reminder[] = [];
   private timer: NodeJS.Timeout | null = null;
-  private firedIds: Set<string> = new Set();
   private onFireCallback: ((id: string, title: string) => void) | null = null;
   private onDigestCallback: ((type: 'today' | 'week', items: Reminder[]) => void) | null = null;
   private digestSettings: DigestSettings | null = null;
+
+  // id → 発火済みの nextFireTime を記録。同じ nextFireTime の二重発火を防止する。
+  // setTimeout ベースの firedIds.clear() だとスリープ復帰時に一斉発火して
+  // 競合が起きるため、発火済み時刻で判定する方式に変更。
+  private firedMap: Map<string, string> = new Map();
   private digestFiredKeys: Set<string> = new Set();
 
   start(
@@ -34,9 +38,14 @@ export class Scheduler {
     }
   }
 
+  /** スリープ復帰時などに外部から即座にチェックを実行する */
+  checkNow(): void {
+    this.check();
+  }
+
   updateReminders(reminders: Reminder[]): void {
     this.reminders = reminders;
-    this.firedIds.clear();
+    this.firedMap.clear();
   }
 
   updateDigestSettings(settings: DigestSettings): void {
@@ -47,18 +56,24 @@ export class Scheduler {
     const now = new Date();
     this.checkReminders(now);
     this.checkDigest(now);
-
-    setTimeout(() => {
-      this.firedIds.clear();
-    }, 120_000);
   }
 
   private checkReminders(now: Date): void {
+    const nowMs = now.getTime();
+
     for (const r of this.reminders) {
       if (!r.enabled || r.nextFireTime === null) continue;
-      const diff = Math.abs(new Date(r.nextFireTime).getTime() - now.getTime());
-      if (diff <= 30_000 && !this.firedIds.has(r.id)) {
-        this.firedIds.add(r.id);
+
+      // この nextFireTime を既に発火済みならスキップ
+      if (this.firedMap.get(r.id) === r.nextFireTime) continue;
+
+      const fireMs = new Date(r.nextFireTime).getTime();
+      const diff = nowMs - fireMs;
+
+      // 発火条件: 予定時刻の30秒前〜過去すべて
+      // スリープで数時間経過しても、復帰後に確実に発火する
+      if (diff >= -30_000) {
+        this.firedMap.set(r.id, r.nextFireTime);
         this.onFireCallback?.(r.id, r.title);
       }
     }
@@ -71,11 +86,13 @@ export class Scheduler {
     const dateStr = now.toISOString().split('T')[0];
 
     // 今日のダイジェスト
+    // 条件: 設定時刻を過ぎていて、当日まだ未発火
+    // スリープで設定時刻を跨いでも復帰後に発火する
     if (this.digestSettings.todayEnabled && this.digestSettings.todayTime) {
       const [h, m] = this.digestSettings.todayTime.split(':').map(Number);
       const targetMinutes = h * 60 + m;
       const key = `today-${dateStr}`;
-      if (Math.abs(currentMinutes - targetMinutes) <= 1 && !this.digestFiredKeys.has(key)) {
+      if (currentMinutes >= targetMinutes && !this.digestFiredKeys.has(key)) {
         this.digestFiredKeys.add(key);
         this.onDigestCallback?.('today', this.getTodayReminders(now));
       }
@@ -87,7 +104,7 @@ export class Scheduler {
         const [h, m] = this.digestSettings.weeklyTime.split(':').map(Number);
         const targetMinutes = h * 60 + m;
         const key = `weekly-${dateStr}`;
-        if (Math.abs(currentMinutes - targetMinutes) <= 1 && !this.digestFiredKeys.has(key)) {
+        if (currentMinutes >= targetMinutes && !this.digestFiredKeys.has(key)) {
           this.digestFiredKeys.add(key);
           this.onDigestCallback?.('week', this.getWeekReminders(now));
         }

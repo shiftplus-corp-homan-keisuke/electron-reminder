@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, Menu, powerMonitor } from 'electron';
 import path from 'path';
 import { spawn, spawnSync } from 'child_process';
 import { updateElectronApp } from 'update-electron-app';
@@ -294,6 +294,13 @@ app.whenReady().then(() => {
   createWindow();
   initTray();
   startScheduler();
+
+  // スリープ復帰時にスケジューラを即座にチェック
+  // setInterval はスリープ中停止するため、復帰直後に未発火の予定を拾う
+  powerMonitor.on('resume', () => {
+    console.info('[Main] System resumed from sleep, triggering scheduler check...');
+    scheduler.checkNow();
+  });
 
   // 初回起動時のディープリンク: process.argv にURLが含まれる場合はペンディングに格納
   // (createWindow後なので mainWindow はあるが Renderer ロードは未完 → did-finish-load で送信)
