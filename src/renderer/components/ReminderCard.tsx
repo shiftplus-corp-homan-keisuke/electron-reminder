@@ -73,7 +73,7 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
         <div className="flex items-center gap-1 mb-0.5 overflow-hidden">
           <Clock className="size-3 text-muted-foreground/70 shrink-0" strokeWidth={1.8} />
           <span className="text-[11px] text-muted-foreground leading-none truncate">
-            {formatFireTime(reminder.nextFireTime, reminder.enabled)}
+            {formatFireTime(reminder)}
           </span>
         </div>
 

@@ -267,8 +267,13 @@ function registerIpcHandlers(): void {
 
 function startScheduler(): void {
   scheduler.start(
-    (id, title) => {
+    (id, title, silent) => {
+      // Renderer に発火を通知して nextFireTime を次回に進める（サイレントでも必要）
       mainWindow?.webContents.send(IPC_CHANNELS.REMINDER_FIRED, id);
+
+      // サイレント発火: スリープ中に見逃した繰り返し予定 → 通知は出さない
+      if (silent) return;
+
       const skipNative = disableNativeNotificationOnWebhook && !!webhookUrl;
       if (!skipNative) {
         notificationManager.show({ id, title }, (firedId) => {

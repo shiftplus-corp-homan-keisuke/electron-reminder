@@ -11,7 +11,7 @@ export interface DigestSettings {
 export class Scheduler {
   private reminders: Reminder[] = [];
   private timer: NodeJS.Timeout | null = null;
-  private onFireCallback: ((id: string, title: string) => void) | null = null;
+  private onFireCallback: ((id: string, title: string, silent: boolean) => void) | null = null;
   private onDigestCallback: ((type: 'today' | 'week', items: Reminder[]) => void) | null = null;
   private digestSettings: DigestSettings | null = null;
 
@@ -22,7 +22,7 @@ export class Scheduler {
   private digestFiredKeys: Set<string> = new Set();
 
   start(
-    onFire: (id: string, title: string) => void,
+    onFire: (id: string, title: string, silent: boolean) => void,
     onDigest: (type: 'today' | 'week', items: Reminder[]) => void,
   ): void {
     this.onFireCallback = onFire;
@@ -74,7 +74,12 @@ export class Scheduler {
       // スリープで数時間経過しても、復帰後に確実に発火する
       if (diff >= -30_000) {
         this.firedMap.set(r.id, r.nextFireTime);
-        this.onFireCallback?.(r.id, r.title);
+
+        // 繰り返しリマインダーが大幅に過去（5分超）の場合、
+        // スリープ等で見逃したと判断し nextFireTime の更新のみ行う（サイレント発火）。
+        // 一回限りの予定は常にキャッチアップ通知する。
+        const silent = r.recurrenceType !== 'once' && diff > 300_000;
+        this.onFireCallback?.(r.id, r.title, silent);
       }
     }
   }

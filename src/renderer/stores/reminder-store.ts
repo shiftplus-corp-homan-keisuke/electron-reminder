@@ -39,6 +39,12 @@ function isDone(r: Reminder): boolean {
   return r.recurrenceType === 'once' && r.nextFireTime === null && !!r.firedAt;
 }
 
+function getReminderDisplayTime(r: Reminder): string | null {
+  if (r.nextFireTime) return r.nextFireTime;
+  if (isDone(r)) return r.dateTime;
+  return null;
+}
+
 function matchesFilter(r: Reminder, filter: ReminderFilter): boolean {
   switch (filter) {
     case 'pending':
@@ -48,15 +54,19 @@ function matchesFilter(r: Reminder, filter: ReminderFilter): boolean {
     case 'all':
       return true;
     case 'today': {
-      if (!r.enabled || !r.nextFireTime) return false;
+      const displayTime = getReminderDisplayTime(r);
+      if (!displayTime) return false;
+      if (!r.enabled && !isDone(r)) return false;
       const [start, end] = getTodayRange();
-      const ft = new Date(r.nextFireTime);
+      const ft = new Date(displayTime);
       return ft >= start && ft <= end;
     }
     case 'thisWeek': {
-      if (!r.enabled || !r.nextFireTime) return false;
+      const displayTime = getReminderDisplayTime(r);
+      if (!displayTime) return false;
+      if (!r.enabled && !isDone(r)) return false;
       const [start, end] = getWeekRange();
-      const ft = new Date(r.nextFireTime);
+      const ft = new Date(displayTime);
       return ft >= start && ft <= end;
     }
     default:
@@ -176,10 +186,19 @@ export const useReminderStore = create<ReminderState>()(
         return reminders
           .filter((r) => matchesFilter(r, filter))
           .sort((a, b) => {
-            if (a.nextFireTime === null && b.nextFireTime === null) return 0;
-            if (a.nextFireTime === null) return 1;
-            if (b.nextFireTime === null) return -1;
-            return a.nextFireTime.localeCompare(b.nextFireTime);
+            if (filter !== 'today' && filter !== 'thisWeek') {
+              if (a.nextFireTime === null && b.nextFireTime === null) return 0;
+              if (a.nextFireTime === null) return 1;
+              if (b.nextFireTime === null) return -1;
+              return a.nextFireTime.localeCompare(b.nextFireTime);
+            }
+
+            const aTime = getReminderDisplayTime(a);
+            const bTime = getReminderDisplayTime(b);
+            if (aTime === null && bTime === null) return 0;
+            if (aTime === null) return 1;
+            if (bTime === null) return -1;
+            return aTime.localeCompare(bTime);
           });
       },
 

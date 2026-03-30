@@ -1,10 +1,8 @@
 import { format, isToday, isTomorrow, isThisWeek } from 'date-fns';
-import type { RecurrenceType } from '../types/reminder';
+import type { RecurrenceType, Reminder } from '../types/reminder';
 
-export function formatFireTime(nextFireTime: string | null, enabled: boolean): string {
-  if (!enabled) return '無効';
-  if (!nextFireTime) return '完了';
-  const d = new Date(nextFireTime);
+function formatReminderDateTime(dateTime: string): string {
+  const d = new Date(dateTime);
   const t = format(d, 'HH:mm');
   if (isToday(d)) return `今日 ${t}`;
   if (isTomorrow(d)) return `明日 ${t}`;
@@ -13,6 +11,19 @@ export function formatFireTime(nextFireTime: string | null, enabled: boolean): s
     return `${days[d.getDay()]} ${t}`;
   }
   return `${d.getMonth() + 1}/${d.getDate()} ${t}`;
+}
+
+function isSentOnceReminder(reminder: Pick<Reminder, 'recurrenceType' | 'nextFireTime' | 'firedAt'>): boolean {
+  return reminder.recurrenceType === 'once' && reminder.nextFireTime === null && !!reminder.firedAt;
+}
+
+export function formatFireTime(reminder: Pick<Reminder, 'recurrenceType' | 'nextFireTime' | 'enabled' | 'firedAt' | 'dateTime'>): string {
+  if (isSentOnceReminder(reminder)) {
+    return `送信済み • ${formatReminderDateTime(reminder.dateTime)}`;
+  }
+  if (!reminder.enabled) return '無効';
+  if (!reminder.nextFireTime) return '完了';
+  return formatReminderDateTime(reminder.nextFireTime);
 }
 
 export function recurrenceLabel(type: RecurrenceType): string {
