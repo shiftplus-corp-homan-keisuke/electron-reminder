@@ -77,6 +77,27 @@ export class NotificationManager {
     notification.show();
   }
 
+  /** ダイジェスト通知を Webhook へ POST する */
+  sendWebhookDigest(webhookUrl: string, type: 'today' | 'week', items: Reminder[]): void {
+    if (!webhookUrl || items.length === 0) return;
+
+    const count = items.length;
+    const header = type === 'today'
+      ? `📅 今日の予定 (${count}件)`
+      : `📆 今週の予定 (${count}件)`;
+
+    const lines = items.slice(0, 10).map((r) => {
+      const time = r.nextFireTime
+        ? new Date(r.nextFireTime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+        : '';
+      const shortTitle = r.title.split('\n')[0].slice(0, 50);
+      return time ? `${time} ${shortTitle}` : shortTitle;
+    });
+    if (count > 10) lines.push(`...他 ${count - 10} 件`);
+
+    this.sendWebhook(webhookUrl, [header, ...lines].join('\n'));
+  }
+
   /** リマインダー発火時に Webhook へ POST する */
   sendWebhook(webhookUrl: string, title: string): void {
     if (!webhookUrl) return;

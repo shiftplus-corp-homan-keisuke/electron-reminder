@@ -281,7 +281,11 @@ function startScheduler(): void {
       notificationManager.sendWebhook(webhookUrl, title);
     },
     (type, items) => {
-      notificationManager.showDigest(type, items);
+      const skipNative = disableNativeNotificationOnWebhook && !!webhookUrl;
+      if (!skipNative) {
+        notificationManager.showDigest(type, items);
+      }
+      notificationManager.sendWebhookDigest(webhookUrl, type, items);
     }
   );
 }
