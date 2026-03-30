@@ -47,20 +47,34 @@ describe('useReminderStore schedule filters', () => {
     useReminderStore.setState({ reminders: [], filter: 'pending', focusedReminderId: null });
   });
 
-  it('today フィルタは送信済み once と未送信の当日予定を含み、範囲外の送信済み once を含まない', () => {
-    const sentOnceToday = createReminder({
-      id: 'sent-once-today',
-      title: 'sent once today',
-      dateTime: toIso(2026, 2, 30, 15, 0),
-      firedAt: toIso(2026, 2, 30, 15, 1),
+  it('today フィルタは未送信を先、送信済み once を後ろに並べ、各グループ内では日時順にする', () => {
+    const pendingTodayEarlier = createReminder({
+      id: 'pending-today-earlier',
+      title: 'pending today earlier',
+      recurrenceType: 'daily',
+      dateTime: toIso(2026, 2, 28, 8, 0),
+      nextFireTime: toIso(2026, 2, 30, 10, 0),
+      firedAt: undefined,
     });
-    const pendingToday = createReminder({
-      id: 'pending-today',
-      title: 'pending today',
+    const pendingTodayLater = createReminder({
+      id: 'pending-today-later',
+      title: 'pending today later',
       recurrenceType: 'daily',
       dateTime: toIso(2026, 2, 28, 18, 0),
       nextFireTime: toIso(2026, 2, 30, 18, 0),
       firedAt: undefined,
+    });
+    const sentOnceTodayEarlier = createReminder({
+      id: 'sent-once-today-earlier',
+      title: 'sent once today earlier',
+      dateTime: toIso(2026, 2, 30, 12, 0),
+      firedAt: toIso(2026, 2, 30, 12, 1),
+    });
+    const sentOnceTodayLater = createReminder({
+      id: 'sent-once-today-later',
+      title: 'sent once today later',
+      dateTime: toIso(2026, 2, 30, 15, 0),
+      firedAt: toIso(2026, 2, 30, 15, 1),
     });
     const sentOnceOutOfRange = createReminder({
       id: 'sent-once-next-week',
@@ -70,24 +84,31 @@ describe('useReminderStore schedule filters', () => {
     });
 
     useReminderStore.setState({
-      reminders: [sentOnceToday, pendingToday, sentOnceOutOfRange],
+      reminders: [
+        sentOnceTodayLater,
+        pendingTodayLater,
+        sentOnceOutOfRange,
+        pendingTodayEarlier,
+        sentOnceTodayEarlier,
+      ],
       filter: 'today',
     });
 
-    const reminders = useReminderStore.getState().getFilteredReminders();
-    const ids = reminders.map((reminder) => reminder.id);
+    const ids = useReminderStore
+      .getState()
+      .getFilteredReminders()
+      .map((reminder) => reminder.id);
 
-    expect(ids).toEqual(['sent-once-today', 'pending-today']);
-    expect(useReminderStore.getState().getCountByFilter('today')).toBe(2);
+    expect(ids).toEqual([
+      'pending-today-earlier',
+      'pending-today-later',
+      'sent-once-today-earlier',
+      'sent-once-today-later',
+    ]);
+    expect(useReminderStore.getState().getCountByFilter('today')).toBe(4);
   });
 
-  it('thisWeek フィルタは送信済み once と未送信の今週予定を含み、範囲外の送信済み once を含まない', () => {
-    const sentOnceToday = createReminder({
-      id: 'sent-once-today',
-      title: 'sent once today',
-      dateTime: toIso(2026, 2, 30, 15, 0),
-      firedAt: toIso(2026, 2, 30, 15, 1),
-    });
+  it('thisWeek フィルタは未送信を先、送信済み once を後ろに並べ、各グループ内では日時順にする', () => {
     const pendingToday = createReminder({
       id: 'pending-today',
       title: 'pending today',
@@ -95,12 +116,6 @@ describe('useReminderStore schedule filters', () => {
       dateTime: toIso(2026, 2, 28, 18, 0),
       nextFireTime: toIso(2026, 2, 30, 18, 0),
       firedAt: undefined,
-    });
-    const sentOnceThisWeek = createReminder({
-      id: 'sent-once-this-week',
-      title: 'sent once this week',
-      dateTime: toIso(2026, 3, 2, 10, 0),
-      firedAt: toIso(2026, 3, 2, 10, 1),
     });
     const pendingThisWeek = createReminder({
       id: 'pending-this-week',
@@ -110,6 +125,18 @@ describe('useReminderStore schedule filters', () => {
       dateTime: toIso(2026, 2, 20, 11, 0),
       nextFireTime: toIso(2026, 3, 3, 11, 0),
       firedAt: undefined,
+    });
+    const sentOnceToday = createReminder({
+      id: 'sent-once-today',
+      title: 'sent once today',
+      dateTime: toIso(2026, 2, 30, 15, 0),
+      firedAt: toIso(2026, 2, 30, 15, 1),
+    });
+    const sentOnceThisWeek = createReminder({
+      id: 'sent-once-this-week',
+      title: 'sent once this week',
+      dateTime: toIso(2026, 3, 2, 10, 0),
+      firedAt: toIso(2026, 3, 2, 10, 1),
     });
     const sentOnceOutOfRange = createReminder({
       id: 'sent-once-next-week',
@@ -121,22 +148,24 @@ describe('useReminderStore schedule filters', () => {
     useReminderStore.setState({
       reminders: [
         sentOnceOutOfRange,
-        pendingThisWeek,
-        pendingToday,
         sentOnceThisWeek,
+        pendingThisWeek,
         sentOnceToday,
+        pendingToday,
       ],
       filter: 'thisWeek',
     });
 
-    const reminders = useReminderStore.getState().getFilteredReminders();
-    const ids = reminders.map((reminder) => reminder.id);
+    const ids = useReminderStore
+      .getState()
+      .getFilteredReminders()
+      .map((reminder) => reminder.id);
 
     expect(ids).toEqual([
-      'sent-once-today',
       'pending-today',
-      'sent-once-this-week',
       'pending-this-week',
+      'sent-once-today',
+      'sent-once-this-week',
     ]);
     expect(useReminderStore.getState().getCountByFilter('thisWeek')).toBe(4);
   });

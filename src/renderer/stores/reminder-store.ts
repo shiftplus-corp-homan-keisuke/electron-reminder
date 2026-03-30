@@ -45,6 +45,20 @@ function getReminderDisplayTime(r: Reminder): string | null {
   return null;
 }
 
+function compareNullableTime(aTime: string | null, bTime: string | null): number {
+  if (aTime === null && bTime === null) return 0;
+  if (aTime === null) return 1;
+  if (bTime === null) return -1;
+  return aTime.localeCompare(bTime);
+}
+
+function compareTodayAndThisWeekReminders(a: Reminder, b: Reminder): number {
+  const doneOrder = Number(isDone(a)) - Number(isDone(b));
+  if (doneOrder !== 0) return doneOrder;
+
+  return compareNullableTime(getReminderDisplayTime(a), getReminderDisplayTime(b));
+}
+
 function matchesFilter(r: Reminder, filter: ReminderFilter): boolean {
   switch (filter) {
     case 'pending':
@@ -187,18 +201,10 @@ export const useReminderStore = create<ReminderState>()(
           .filter((r) => matchesFilter(r, filter))
           .sort((a, b) => {
             if (filter !== 'today' && filter !== 'thisWeek') {
-              if (a.nextFireTime === null && b.nextFireTime === null) return 0;
-              if (a.nextFireTime === null) return 1;
-              if (b.nextFireTime === null) return -1;
-              return a.nextFireTime.localeCompare(b.nextFireTime);
+              return compareNullableTime(a.nextFireTime, b.nextFireTime);
             }
 
-            const aTime = getReminderDisplayTime(a);
-            const bTime = getReminderDisplayTime(b);
-            if (aTime === null && bTime === null) return 0;
-            if (aTime === null) return 1;
-            if (bTime === null) return -1;
-            return aTime.localeCompare(bTime);
+            return compareTodayAndThisWeekReminders(a, b);
           });
       },
 
