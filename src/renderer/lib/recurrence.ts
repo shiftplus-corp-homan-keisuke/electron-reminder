@@ -42,7 +42,7 @@ export function calculateNextFireTime(reminder: Reminder): string | null {
       return calcOnce(reminder);
 
     case 'daily':
-      return calcDaily(now, recurrenceConfig.time).toISOString();
+      return calcDaily(now, recurrenceConfig.time, recurrenceConfig.daysOfWeek).toISOString();
 
     case 'weekly': {
       const dayOfWeek = recurrenceConfig.dayOfWeek ?? 0;
@@ -67,11 +67,30 @@ function calcOnce(reminder: Reminder): string | null {
   return reminder.dateTime;
 }
 
-function calcDaily(now: Date, time: string): Date {
-  const todayAtTime = applyTime(now, time);
-  if (isBefore(now, todayAtTime)) {
-    return todayAtTime;
+function calcDaily(now: Date, time: string, daysOfWeek?: number[]): Date {
+  // 有効な曜日セット（未指定・空・全曜日はすべて「毎日」扱い）
+  const activeDays =
+    !daysOfWeek || daysOfWeek.length === 0 || daysOfWeek.length === 7
+      ? null
+      : daysOfWeek;
+
+  // 今日〜7日後で最初の「有効曜日 かつ 指定時刻が未来」の日を探す
+  for (let i = 0; i < 8; i++) {
+    const candidate = addDays(now, i);
+    if (activeDays && !activeDays.includes(getDay(candidate))) continue;
+    const candidateAtTime = applyTime(candidate, time);
+    if (isBefore(now, candidateAtTime)) return candidateAtTime;
   }
+
+  // 上記でヒットしない場合（全曜日が時刻済み等）→ 翌週最初の有効曜日
+  for (let i = 1; i <= 7; i++) {
+    const candidate = addDays(now, i);
+    if (!activeDays || activeDays.includes(getDay(candidate))) {
+      return applyTime(candidate, time);
+    }
+  }
+
+  // フォールバック（通常到達しない）
   return applyTime(addDays(now, 1), time);
 }
 

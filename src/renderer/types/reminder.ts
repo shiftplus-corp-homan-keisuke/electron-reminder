@@ -1,9 +1,10 @@
 export type RecurrenceType = 'once' | 'daily' | 'weekly' | 'monthly';
 
 export interface RecurrenceConfig {
-  time: string;        // "HH:mm"形式 - once以外で使用
-  dayOfWeek?: number;  // 0(日)〜6(土) - weeklyで使用
-  dayOfMonth?: number; // 1〜31 - monthlyで使用
+  time: string;          // "HH:mm"形式 - once以外で使用
+  dayOfWeek?: number;    // 0(日)〜6(土) - weeklyで使用
+  dayOfMonth?: number;   // 1〜31 - monthlyで使用
+  daysOfWeek?: number[]; // 0(日)〜6(土)の配列 - dailyで使用。未指定/空は毎日
 }
 
 export interface Category {

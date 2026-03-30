@@ -27,6 +27,27 @@ import {
   DAY_OF_WEEK_OPTIONS,
   DAY_OPTIONS,
 } from '../lib/format';
+
+// 曜日トグルで使うラベル（日〜土）
+const DAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+const WEEKDAYS = [1, 2, 3, 4, 5];
+const WEEKEND = [0, 6];
+
+function sortedEquals(a: number[], b: number[]): boolean {
+  const sa = [...a].sort((x, y) => x - y);
+  const sb = [...b].sort((x, y) => x - y);
+  return sa.length === sb.length && sa.every((v, i) => v === sb[i]);
+}
+
+type DaysPreset = 'everyday' | 'weekdays' | 'weekend' | 'custom';
+
+function detectPreset(days: number[]): DaysPreset {
+  if (days.length === 0 || sortedEquals(days, ALL_DAYS)) return 'everyday';
+  if (sortedEquals(days, WEEKDAYS)) return 'weekdays';
+  if (sortedEquals(days, WEEKEND)) return 'weekend';
+  return 'custom';
+}
 import type { Reminder, RecurrenceType, RecurrenceConfig } from '../types/reminder';
 
 interface ReminderFormProps {
@@ -44,6 +65,7 @@ interface FormValues {
   time: string;
   dayOfWeek: number;
   dayOfMonth: number;
+  daysOfWeek: number[]; // daily の曜日フィルタ（空 = 毎日）
 }
 
 interface FormErrors {
@@ -62,6 +84,7 @@ function defaultValues(reminder?: Reminder, initialTitle?: string): FormValues {
       time: '09:00',
       dayOfWeek: 1,
       dayOfMonth: 1,
+      daysOfWeek: [],
     };
   }
   const dt = new Date(reminder.dateTime);
@@ -75,6 +98,7 @@ function defaultValues(reminder?: Reminder, initialTitle?: string): FormValues {
       : (reminder.recurrenceConfig.time ?? '09:00'),
     dayOfWeek: reminder.recurrenceConfig.dayOfWeek ?? 1,
     dayOfMonth: reminder.recurrenceConfig.dayOfMonth ?? 1,
+    daysOfWeek: reminder.recurrenceConfig.daysOfWeek ?? [],
   };
 }
 
@@ -113,6 +137,9 @@ export default function ReminderForm({ open, onOpenChange, reminder, initialTitl
     if (!validate()) return;
 
     const config: RecurrenceConfig = { time: values.time };
+    if (values.recurrenceType === 'daily' && values.daysOfWeek.length > 0 && values.daysOfWeek.length < 7) {
+      config.daysOfWeek = values.daysOfWeek;
+    }
     if (values.recurrenceType === 'weekly') config.dayOfWeek = values.dayOfWeek;
     if (values.recurrenceType === 'monthly') config.dayOfMonth = values.dayOfMonth;
 
@@ -250,13 +277,82 @@ export default function ReminderForm({ open, onOpenChange, reminder, initialTitl
           )}
 
           {values.recurrenceType === 'daily' && (
-            <div className="flex flex-col gap-1.5 w-36">
-              <Label>時刻 <span className="text-destructive">*</span></Label>
-              <TimePickerInput
-                value={values.time}
-                onChange={(v) => set({ time: v })}
-              />
-              {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5 w-36">
+                <Label>時刻 <span className="text-destructive">*</span></Label>
+                <TimePickerInput
+                  value={values.time}
+                  onChange={(v) => set({ time: v })}
+                />
+                {errors.time && <p className="text-xs text-destructive">{errors.time}</p>}
+              </div>
+
+              {/* 曜日設定 */}
+              <div className="flex flex-col gap-2">
+                <Label>曜日</Label>
+
+                {/* プリセットボタン */}
+                <div className="flex gap-1.5">
+                  {(
+                    [
+                      { id: 'everyday', label: '毎日', days: [] },
+                      { id: 'weekdays', label: '平日', days: WEEKDAYS },
+                      { id: 'weekend', label: '週末', days: WEEKEND },
+                    ] as const
+                  ).map(({ id, label, days }) => {
+                    const active = detectPreset(values.daysOfWeek) === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => set({ daysOfWeek: [...days] })}
+                        className={[
+                          'px-3 py-1 rounded-full text-xs font-medium border transition-colors',
+                          active
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-muted-foreground border-border hover:border-primary hover:text-primary',
+                        ].join(' ')}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 個別曜日トグル */}
+                <div className="flex gap-1">
+                  {DAY_LABELS.map((label, idx) => {
+                    const selected =
+                      values.daysOfWeek.length === 0 || values.daysOfWeek.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          const current =
+                            values.daysOfWeek.length === 0 ? ALL_DAYS : values.daysOfWeek;
+                          const next = current.includes(idx)
+                            ? current.filter((d) => d !== idx)
+                            : [...current, idx];
+                          // 全解除は「毎日」に戻す
+                          set({ daysOfWeek: next.length === 0 ? [] : next });
+                        }}
+                        className={[
+                          'flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium border transition-colors',
+                          selected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-muted-foreground border-border hover:border-primary',
+                          // 土曜・日曜を視覚的に区別
+                          !selected && idx === 0 ? 'text-red-400' : '',
+                          !selected && idx === 6 ? 'text-blue-400' : '',
+                        ].join(' ')}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 

@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useReminderStore } from '../stores/reminder-store';
 import { useCategoryStore } from '../stores/category-store';
-import { formatFireTime, recurrenceLabel } from '../lib/format';
+import { formatFireTime, recurrenceLabel, formatDaysOfWeek } from '../lib/format';
 import type { Reminder } from '../types/reminder';
 
 interface ReminderCardProps {
@@ -111,6 +111,14 @@ export default function ReminderCard({ reminder, isFocused, onEdit }: ReminderCa
           )}
         >
           {recurrenceLabel(reminder.recurrenceType)}
+          {reminder.recurrenceType === 'daily' &&
+            reminder.recurrenceConfig.daysOfWeek &&
+            reminder.recurrenceConfig.daysOfWeek.length > 0 &&
+            reminder.recurrenceConfig.daysOfWeek.length < 7 && (
+              <span className="ml-1 opacity-80">
+                · {formatDaysOfWeek(reminder.recurrenceConfig.daysOfWeek)}
+              </span>
+            )}
         </span>
 
         <Switch
