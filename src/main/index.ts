@@ -88,6 +88,7 @@ const scheduler = new Scheduler();
 const notificationManager = new NotificationManager();
 let webhookUrl = '';
 let disableNativeNotificationOnWebhook = false;
+let isQuitting = false;
 
 // 初回起動時のディープリンク（Renderer ロード前に届いた場合に一時保持）
 let pendingDeepLinkTitle: string | null = null;
@@ -176,8 +177,10 @@ function createWindow(): void {
   }
 
   mainWindow.on('close', (e) => {
-    e.preventDefault();
-    mainWindow?.hide();
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow?.hide();
+    }
   });
 
   // Renderer ロード完了後、保留中のディープリンクタイトルを送信
@@ -212,10 +215,6 @@ function initTray(): void {
 }
 
 function quit(): void {
-  mainWindow?.removeAllListeners('close');
-  mainWindow?.close();
-  trayManager?.destroy();
-  scheduler.stop();
   app.quit();
 }
 
@@ -309,6 +308,12 @@ app.whenReady().then(() => {
       // 不正なURL - 無視
     }
   }
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
+  scheduler.stop();
+  trayManager?.destroy();
 });
 
 app.on('window-all-closed', () => {
