@@ -171,7 +171,7 @@ export default function ReminderForm({ open, onOpenChange, reminder, initialTitl
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2.5 mb-1">
             <div className="flex items-center justify-center size-8 rounded-lg bg-primary/10 shrink-0">
@@ -197,7 +197,7 @@ export default function ReminderForm({ open, onOpenChange, reminder, initialTitl
               id="title"
               placeholder="例: 薬を飲む"
               maxLength={500}
-              rows={3}
+              rows={5}
               className="resize-none"
               value={values.title}
               onChange={(e) => set({ title: e.target.value })}
